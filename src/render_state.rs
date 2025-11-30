@@ -28,14 +28,14 @@ impl RenderState {
             source: ShaderSource::Wgsl(Cow::Borrowed(fragment_shader_source)),
         });
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: None,
+            label: Some("pipeline_layout"),
             bind_group_layouts: &[parameters_bind_group_layout],
             push_constant_ranges: &[],
         });
         let surface_capabilities = surface.get_capabilities(adapter);
         let surface_format = surface_capabilities.formats[0];
         let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: None,
+            label: Some("render_pipeline"),
             layout: Some(&pipeline_layout),
             vertex: VertexState {
                 module: vertex_shader,

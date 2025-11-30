@@ -58,7 +58,7 @@ impl PersistentState {
             source: ShaderSource::Wgsl(Cow::Borrowed(include_str!("./vertex.wgsl"))),
         });
         let parameters_buffer = device.create_buffer(&BufferDescriptor {
-            label: None,
+            label: Some("parameters_buffer"),
             mapped_at_creation: false,
             size: size_of::<Parameters>()
                 .try_into()
@@ -67,7 +67,7 @@ impl PersistentState {
         });
         let parameters_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                label: None,
+                label: Some("parameters_bind_group_layout"),
                 entries: &[BindGroupLayoutEntry {
                     binding: 0,
                     visibility: ShaderStages::FRAGMENT,
@@ -80,7 +80,7 @@ impl PersistentState {
                 }],
             });
         let parameters_bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: None,
+            label: Some("parameters_bind_group"),
             layout: &parameters_bind_group_layout,
             entries: &[BindGroupEntry {
                 binding: 0,
