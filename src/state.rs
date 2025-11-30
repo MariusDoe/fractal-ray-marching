@@ -32,12 +32,6 @@ impl State {
     }
 
     pub fn draw(&mut self) -> Result<()> {
-        let frame = self
-            .persistent
-            .surface
-            .get_current_texture()
-            .context("failed to get frame texture")?;
-        let view = frame.texture.create_view(&TextureViewDescriptor::default());
         let mut encoder = self
             .persistent
             .device
@@ -53,6 +47,10 @@ impl State {
             bytemuck::cast_slice(&[self.persistent.parameters]),
         );
         {
+            let view = self
+                .persistent
+                .render_texture
+                .create_view(&TextureViewDescriptor::default());
             let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
                 label: Some("render_pass"),
                 color_attachments: &[Some(RenderPassColorAttachment {
@@ -70,6 +68,32 @@ impl State {
             });
             render_pass.set_pipeline(&self.render.render_pipeline);
             render_pass.set_bind_group(0, &self.persistent.parameters_bind_group, &[]);
+            render_pass.draw(0..4, 0..1);
+        }
+        let frame = self
+            .persistent
+            .surface
+            .get_current_texture()
+            .context("failed to get frame texture")?;
+        {
+            let view = frame.texture.create_view(&TextureViewDescriptor::default());
+            let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
+                label: Some("blit pass"),
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view: &view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: Operations {
+                        load: LoadOp::Clear(Self::CLEAR_COLOR),
+                        store: StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+            render_pass.set_pipeline(&self.persistent.blit_render_pipeline);
+            render_pass.set_bind_group(0, &self.persistent.blit_bind_group, &[]);
             render_pass.draw(0..4, 0..1);
         }
         self.persistent.queue.submit(Some(encoder.finish()));

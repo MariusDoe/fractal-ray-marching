@@ -6,11 +6,16 @@ use std::{
     time::{Duration, Instant},
 };
 use wgpu::{
-    Adapter, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
+    Adapter, AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
     BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType, Buffer,
     BufferBinding, BufferBindingType, BufferDescriptor, BufferUsages, Device, DeviceDescriptor,
-    Instance, InstanceDescriptor, PowerPreference, Queue, RequestAdapterOptions, ShaderModule,
-    ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface,
+    Extent3d, FilterMode, FragmentState, Instance, InstanceDescriptor, MultisampleState,
+    PipelineCompilationOptions, PipelineLayoutDescriptor, PowerPreference, PrimitiveState,
+    PrimitiveTopology, Queue, RenderPipeline, RenderPipelineDescriptor, RequestAdapterOptions,
+    SamplerBindingType, SamplerDescriptor, ShaderModule, ShaderModuleDescriptor, ShaderSource,
+    ShaderStages, Surface, Texture, TextureDescriptor, TextureDimension, TextureFormat,
+    TextureSampleType, TextureUsages, TextureViewDimension, VertexState,
+    wgt::TextureViewDescriptor,
 };
 use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop, window::Window};
 
@@ -21,6 +26,9 @@ pub struct PersistentState {
     pub adapter: Adapter,
     pub device: Device,
     pub queue: Queue,
+    pub render_texture: Texture,
+    pub blit_bind_group: BindGroup,
+    pub blit_render_pipeline: RenderPipeline,
     pub vertex_shader: ShaderModule,
     pub parameters: Parameters,
     pub parameters_buffer: Buffer,
@@ -53,9 +61,105 @@ impl PersistentState {
             .request_device(&DeviceDescriptor::default())
             .await
             .context("failed to request device")?;
+        let render_texture_format = TextureFormat::Rgba8UnormSrgb;
+        let render_texture = device.create_texture(&TextureDescriptor {
+            label: Some("render_texture"),
+            dimension: TextureDimension::D2,
+            size: Extent3d {
+                width: 1280,
+                height: 720,
+                ..Default::default()
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            format: render_texture_format,
+            usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let render_texture_view = render_texture.create_view(&TextureViewDescriptor::default());
+        let render_texture_sampler = device.create_sampler(&SamplerDescriptor {
+            label: Some("render_texture_sampler"),
+            address_mode_u: AddressMode::ClampToEdge,
+            address_mode_v: AddressMode::ClampToEdge,
+            address_mode_w: AddressMode::ClampToEdge,
+            mag_filter: FilterMode::Linear,
+            min_filter: FilterMode::Nearest,
+            mipmap_filter: FilterMode::Nearest,
+            ..Default::default()
+        });
         let vertex_shader = device.create_shader_module(ShaderModuleDescriptor {
             label: Some("vertex_shader"),
             source: ShaderSource::Wgsl(Cow::Borrowed(include_str!("./vertex.wgsl"))),
+        });
+        let blit_fragment_shader = device.create_shader_module(ShaderModuleDescriptor {
+            label: Some("blit_fragment_shader"),
+            source: ShaderSource::Wgsl(Cow::Borrowed(include_str!("./blit.wgsl"))),
+        });
+        let blit_bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("blit_bind_group_layout"),
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Texture {
+                        sample_type: TextureSampleType::Float { filterable: true },
+                        view_dimension: TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        });
+        let blit_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("blit_bind_group"),
+            layout: &blit_bind_group_layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::TextureView(&render_texture_view),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::Sampler(&render_texture_sampler),
+                },
+            ],
+        });
+        let blit_render_pipeline_layout =
+            device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("blit_render_pipeline_layout"),
+                bind_group_layouts: &[&blit_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+        let blit_render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("blit_render_pipeline"),
+            layout: Some(&blit_render_pipeline_layout),
+            vertex: VertexState {
+                module: &vertex_shader,
+                entry_point: Some("vertex_main"),
+                buffers: &[],
+                compilation_options: PipelineCompilationOptions::default(),
+            },
+            fragment: Some(FragmentState {
+                module: &blit_fragment_shader,
+                entry_point: Some("fragment_main"),
+                compilation_options: PipelineCompilationOptions::default(),
+                targets: &[Some(render_texture_format.into())],
+            }),
+            primitive: PrimitiveState {
+                topology: PrimitiveTopology::TriangleStrip,
+                cull_mode: None,
+                ..Default::default()
+            },
+            multisample: MultisampleState::default(),
+            depth_stencil: None,
+            multiview: None,
+            cache: None,
         });
         let parameters_buffer = device.create_buffer(&BufferDescriptor {
             label: Some("parameters_buffer"),
@@ -98,6 +202,9 @@ impl PersistentState {
             adapter,
             device,
             queue,
+            render_texture,
+            blit_bind_group,
+            blit_render_pipeline,
             vertex_shader,
             parameters: Parameters::default(),
             parameters_buffer,
