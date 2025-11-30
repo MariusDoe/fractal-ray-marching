@@ -1,28 +1,32 @@
-alias Position = vec3<f32>;
-alias Direction = vec3<f32>;
-alias Color = vec3<f32>;
+alias Scalar = f32;
+alias Distance = Scalar;
+alias Vector = vec3<Scalar>;
+alias Homogeneous = vec4<Scalar>;
+alias Position = Vector;
+alias Direction = Vector;
+alias Color = Vector;
 
 struct Object {
-    distance: f32,
+    distance: Distance,
     color: Color,
 }
 
-fn object(distance: f32, color: Color) -> Object {
+fn object(distance: Distance, color: Color) -> Object {
     var object: Object;
     object.distance = distance;
     object.color = color;
     return object;
 }
 
-fn sphere(position: Position, radius: f32) -> f32 {
+fn sphere(position: Position, radius: Distance) -> Distance {
     return length(position) - radius;
 }
 
-fn max_comp(a: vec3<f32>) -> f32 {
+fn max_comp(a: Vector) -> Scalar {
     return max(max(a.x, a.y), a.z);
 }
 
-fn box(position: Position, size: vec3<f32>) -> f32 {
+fn box(position: Position, size: Vector) -> Distance {
     let q = abs(position) - size;
     return length(max(q, vec3(0))) + min(max_comp(q), 0);
 }
@@ -34,20 +38,21 @@ fn object_union(a: Object, b: Object) -> Object {
     return object(distance, color);
 }
 
-fn scene(position: vec3<f32>) -> Object {
+fn scene(position: Position) -> Object {
     var p = position;
     return object_union(
         object(sphere(p, 0.5), vec3(0, 1, 0)),
         object(box(p - vec3(0.5, 0.5, -0.5), vec3(0.1)), vec3(1, 0, 0)),
     );
+fn scene(position: Position) -> Object {
 }
 
-const MAX_TOTAL_DISTANCE = f32(1.0e3);
-const MIN_DISTANCE = f32(5.0e-4);
+const MAX_TOTAL_DISTANCE = Distance(1.0e3);
+const MIN_DISTANCE = Distance(5.0e-4);
 const MAX_ITERATIONS = u32(3.0e2);
 
-const BACKGROUND_COLOR = vec3<f32>(0);
-const SUN_DIRECTION = vec3(-1, -0.5, 1);
+const BACKGROUND_COLOR = Color(0);
+const SUN_DIRECTION = Direction(-1, -0.5, 1);
 const SHADOW_FACTOR = 0.7;
 const SELF_SHADOW_SHARPNESS = 10;
 const OBJECT_SHADOW_SHARPNESS = 32;
@@ -55,18 +60,18 @@ const OBJECT_SHADOW_SHARPNESS = 32;
 const INFINITY = pow(10, 20);
 
 struct Parameters {
-    camera_matrix: mat4x4<f32>,
-    aspect_scale: vec2<f32>,
-    time: f32,
+    camera_matrix: mat4x4<Scalar>,
+    aspect_scale: vec2<Scalar>,
+    time: Scalar,
 }
 
 @group(0) @binding(0) var<uniform> parameters: Parameters;
 
 struct MarchResult {
     position: Position,
-    distance: f32,
+    distance: Distance,
     color: Color,
-    closeness: f32,
+    closeness: Scalar,
 }
 
 fn march(start_position: Position, direction: Direction) -> MarchResult {
@@ -93,7 +98,7 @@ fn march(start_position: Position, direction: Direction) -> MarchResult {
 }
 
 fn calculate_normal(position: Position) -> Direction {
-    let k = vec2<f32>(1, -1);
+    let k = vec2<Scalar>(1, -1);
     return normalize(k.xyy * scene(position + k.xyy * MIN_DISTANCE).distance +
                      k.yyx * scene(position + k.yyx * MIN_DISTANCE).distance +
                      k.yxy * scene(position + k.yxy * MIN_DISTANCE).distance +
@@ -101,7 +106,7 @@ fn calculate_normal(position: Position) -> Direction {
 }
 
 @fragment
-fn fragment_main(@location(0) screen_position: vec2<f32>) -> @location(0) vec4<f32> {
+fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec4<Scalar> {
     let direction = normalize(vec3(screen_position * parameters.aspect_scale, 5));
     let object_result = march(vec3(0), direction);
     var color = object_result.color;
