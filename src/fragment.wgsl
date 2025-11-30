@@ -83,7 +83,7 @@ fn march(start_position: Position, direction: Direction) -> MarchResult {
     var closeness = INFINITY;
     for (var iteration = 0u; iteration < MAX_ITERATIONS && total_distance < MAX_TOTAL_DISTANCE; iteration++) {
         let position = start_position + total_distance * direction;
-        let object = scene((vec4(position, 1) * parameters.camera_matrix).xyz);
+        let object = scene(position);
         closeness = min(closeness, object.distance / total_distance);
         if (object.distance <= MIN_DISTANCE) {
             result.color = object.color;
@@ -105,10 +105,23 @@ fn calculate_normal(position: Position) -> Direction {
                      k.xxx * scene(position + k.xxx * MIN_DISTANCE).distance);
 }
 
+fn transform_homogeneous(a: Homogeneous) -> Vector {
+    return (a * parameters.camera_matrix).xyz;
+}
+
+fn transform_position(position: Position) -> Position {
+    return transform_homogeneous(vec4(position, 1));
+}
+
+fn transform_direction(direction: Direction) -> Direction {
+    return transform_homogeneous(vec4(direction, 0));
+}
+
 @fragment
 fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec4<Scalar> {
-    let direction = normalize(vec3(screen_position * parameters.aspect_scale, 5));
-    let object_result = march(vec3(0), direction);
+    let direction = transform_direction(normalize(vec3(screen_position * parameters.aspect_scale, 5)));
+    let position = transform_position(vec3(0));
+    let object_result = march(position, direction);
     var color = object_result.color;
     if (object_result.distance >= 0) {
         let position = object_result.position;
