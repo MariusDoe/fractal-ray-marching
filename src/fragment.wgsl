@@ -31,6 +31,22 @@ fn box(position: Position, size: Vector) -> Distance {
     return length(max(q, vec3(0))) + min(max_comp(q), 0);
 }
 
+fn half_space(position: Position, anchor: Position, normal: Direction) -> Distance {
+    return dot(position - anchor, normal);
+}
+
+fn plane_normal(a: Position, b: Position, c: Position) -> Direction {
+    return normalize(cross(c - a, b - a));
+}
+
+fn tetrahedron(position: Position, a: Position, b: Position, c: Position, d: Position) -> Distance {
+    return max(max(max(
+        half_space(position, a, plane_normal(a, b, c)),
+        half_space(position, a, plane_normal(a, c, d))),
+        half_space(position, a, plane_normal(a, d, b))),
+        half_space(position, b, plane_normal(b, d, c)));
+}
+
 fn object_union(a: Object, b: Object) -> Object {
     let distance = min(a.distance, b.distance);
     let factor = step(b.distance, distance);
@@ -38,13 +54,45 @@ fn object_union(a: Object, b: Object) -> Object {
     return object(distance, color);
 }
 
-fn scene(position: Position) -> Object {
+fn mirror(position: Position, anchor: Position, normal: Direction) -> Position {
+    let distance = dot(position - anchor, normal);
+    return position + (abs(distance) - distance) * normal;
+}
+
+fn sierpinski_tetrahedron(position: Position) -> Object {
+    let num_iterations = 6u;
+    let base_scale_factor = 0.1;
+    let scale_factor = base_scale_factor / Scalar(1 << num_iterations);
+    let height = 4 / sqrt(6);
+    let top = vec3(0, height * base_scale_factor, 0);
+    let one_over_sqrt_3 = 1 / sqrt(3);
+    let a = top + scale_factor * vec3(-1, -height, -one_over_sqrt_3);
+    let b = top + scale_factor * vec3(1, -height, -one_over_sqrt_3);
+    let c = top + scale_factor * vec3(0, -height, 2 * one_over_sqrt_3);
+    let a_top = a - top;
+    let b_top = b - top;
+    let c_top = c - top;
+    let a_normal = normalize(top - a);
+    let b_normal = normalize(top - b);
+    let c_normal = normalize(top - c);
     var p = position;
+    for (var i = i32(num_iterations) - 1; i >= 0; i--) {
+        let distance = Scalar(1 << u32(i));
+        p = mirror(p, top + distance * a_top, a_normal);
+        p = mirror(p, top + distance * b_top, b_normal);
+        p = mirror(p, top + distance * c_top, c_normal);
+    }
+    return object(tetrahedron(p, top, a, b, c), vec3(0.8, 0.8, 0.7));
+}
+
+fn test_scene(position: Position) -> Object {
     return object_union(
-        object(sphere(p, 0.5), vec3(0, 1, 0)),
-        object(box(p - vec3(0.5, 0.5, -0.5), vec3(0.1)), vec3(1, 0, 0)),
-    );
+        object(sphere(position, 0.5), vec3(0, 1, 0)),
+        object(box(position - vec3(0.5, 0.5, -0.5), vec3(0.1)), vec3(1, 0, 0)));
+}
+
 fn scene(position: Position) -> Object {
+    return sierpinski_tetrahedron(position);
 }
 
 const MAX_TOTAL_DISTANCE = Distance(1.0e3);
