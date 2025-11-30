@@ -1,7 +1,14 @@
 use anyhow::{Context, Result};
+use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
+use cgmath::{InnerSpace, Matrix, Matrix4, Rad, Vector3, Zero};
 use pollster::block_on;
-use std::{borrow::Cow, cmp::min, sync::Arc, time::Instant};
+use std::{
+    borrow::Cow,
+    cmp::min,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use wgpu::{
     Adapter, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
     BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType, Buffer,
@@ -16,8 +23,9 @@ use wgpu::{
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalSize,
-    event::WindowEvent,
+    event::{KeyEvent, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
+    keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowId},
 };
 
@@ -34,6 +42,7 @@ struct PersistentState {
     parameters_bind_group_layout: BindGroupLayout,
     parameters_bind_group: BindGroup,
     start_time: Instant,
+    last_frame_time: Instant,
 }
 
 impl PersistentState {
@@ -110,6 +119,7 @@ impl PersistentState {
             parameters_bind_group_layout,
             parameters_bind_group,
             start_time,
+            last_frame_time: start_time,
         };
         state.resize().context("failed to resize the surface")?;
         Ok(state)
@@ -125,11 +135,20 @@ impl PersistentState {
         self.parameters.update_aspect(width, height);
         Ok(())
     }
+
+    fn update_time(&mut self) -> Duration {
+        let now = Instant::now();
+        let delta_time = now - self.last_frame_time;
+        self.parameters.time = (now - self.start_time).as_secs_f32();
+        self.last_frame_time = now;
+        delta_time
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 struct Parameters {
+    camera_matrix: [[f32; 4]; 4],
     aspect_scale: [f32; 2],
     time: f32,
     padding: [u8; 4],
@@ -141,14 +160,82 @@ impl Parameters {
         self.aspect_scale = [width as f32 / min, height as f32 / min];
     }
 
-    fn update_time(&mut self, start_time: Instant) {
-        self.time = (Instant::now() - start_time).as_secs_f32();
+    fn update_camera(&mut self, camera: &Camera) {
+        self.camera_matrix = *camera.to_matrix().transpose().as_ref();
+    }
+}
+
+#[derive(Debug)]
+struct Camera {
+    position: Vector3<f32>,
+    pitch: Rad<f32>,
+    yaw: Rad<f32>,
+}
+
+impl Camera {
+    fn position_matrix(&self) -> Matrix4<f32> {
+        Matrix4::from_translation(self.position)
+    }
+
+    fn pitch_matrix(&self) -> Matrix4<f32> {
+        Matrix4::from_angle_x(self.pitch)
+    }
+
+    fn yaw_matrix(&self) -> Matrix4<f32> {
+        Matrix4::from_angle_y(self.yaw)
+    }
+
+    fn rotation_matrix(&self) -> Matrix4<f32> {
+        self.yaw_matrix() * self.pitch_matrix()
+    }
+
+    fn to_matrix(&self) -> Matrix4<f32> {
+        self.position_matrix() * self.rotation_matrix()
+    }
+
+    const MOVEMENT_PER_SECOND: f32 = 1.5;
+    const ROTATION_PER_SECOND: Rad<f32> = Rad(0.5);
+
+    fn forward(&self) -> Vector3<f32> {
+        self.rotation_matrix().z.truncate()
+    }
+
+    fn right(&self) -> Vector3<f32> {
+        self.yaw_matrix().x.truncate()
+    }
+
+    fn up(&self) -> Vector3<f32> {
+        Vector3::unit_y()
+    }
+
+    fn update(&mut self, keys: KeyState, delta_time: Duration) {
+        let seconds = delta_time.as_secs_f32();
+        let movement = self.forward() * keys.forward_magnitude().into()
+            + self.right() * keys.right_magnitude().into()
+            + self.up() * keys.up_magnitude().into();
+        if !movement.is_zero() {
+            self.position += movement.normalize_to(Self::MOVEMENT_PER_SECOND * seconds);
+        }
+        let rotation_magnitude = Self::ROTATION_PER_SECOND * seconds;
+        self.pitch += rotation_magnitude * keys.pitch_magnitude().into();
+        self.yaw += rotation_magnitude * keys.yaw_magnitude().into();
+    }
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self {
+            position: Vector3::zero(),
+            pitch: Rad::zero(),
+            yaw: Rad::zero(),
+        }
     }
 }
 
 #[derive(Debug)]
 struct RenderState {
     render_pipeline: RenderPipeline,
+    camera: Camera,
 }
 
 impl RenderState {
@@ -198,7 +285,55 @@ impl RenderState {
             multiview: None,
             cache: None,
         });
-        Self { render_pipeline }
+        let camera = Camera::default();
+        Self {
+            render_pipeline,
+            camera,
+        }
+    }
+}
+
+bitflags! {
+    #[derive(Debug, Default, Clone, Copy)]
+    struct KeyState: u16 {
+        const MoveForward = 1 << 0;
+        const MoveBackward = 1 << 1;
+        const MoveRight = 1 << 2;
+        const MoveLeft = 1 << 3;
+        const MoveUp = 1 << 4;
+        const MoveDown = 1 << 5;
+        const PitchUp = 1 << 6;
+        const PitchDown = 1 << 7;
+        const YawRight = 1 << 8;
+        const YawLeft = 1 << 9;
+    }
+}
+
+type Magnitude = i8;
+
+impl KeyState {
+    fn magnitude(&self, positive: Self, negative: Self) -> Magnitude {
+        Magnitude::from(self.contains(positive)) - Magnitude::from(self.contains(negative))
+    }
+
+    fn forward_magnitude(&self) -> Magnitude {
+        self.magnitude(Self::MoveForward, Self::MoveBackward)
+    }
+
+    fn right_magnitude(&self) -> Magnitude {
+        self.magnitude(Self::MoveRight, Self::MoveLeft)
+    }
+
+    fn up_magnitude(&self) -> Magnitude {
+        self.magnitude(Self::MoveUp, Self::MoveDown)
+    }
+
+    fn pitch_magnitude(&self) -> Magnitude {
+        self.magnitude(Self::PitchDown, Self::PitchUp)
+    }
+
+    fn yaw_magnitude(&self) -> Magnitude {
+        self.magnitude(Self::YawRight, Self::YawLeft)
     }
 }
 
@@ -206,6 +341,7 @@ impl RenderState {
 struct State {
     persistent: PersistentState,
     render: RenderState,
+    key_state: KeyState,
 }
 
 impl State {
@@ -214,7 +350,12 @@ impl State {
     async fn init(event_loop: &ActiveEventLoop) -> Result<Self> {
         let persistent = PersistentState::init(event_loop).await?;
         let render = RenderState::init(&persistent);
-        Ok(Self { persistent, render })
+        let key_state = KeyState::default();
+        Ok(Self {
+            persistent,
+            render,
+            key_state,
+        })
     }
 
     fn draw(&mut self) -> Result<()> {
@@ -228,9 +369,11 @@ impl State {
             .persistent
             .device
             .create_command_encoder(&CommandEncoderDescriptor::default());
+        let delta_time = self.persistent.update_time();
+        self.render.camera.update(self.key_state, delta_time);
         self.persistent
             .parameters
-            .update_time(self.persistent.start_time);
+            .update_camera(&self.render.camera);
         self.persistent.queue.write_buffer(
             &self.persistent.parameters_buffer,
             0,
@@ -261,6 +404,30 @@ impl State {
         frame.present();
         self.persistent.window.request_redraw();
         Ok(())
+    }
+
+    fn handle_movement(&mut self, key: KeyState, pressed: bool) {
+        self.key_state.set(key, pressed);
+    }
+
+    fn handle_key(&mut self, event: KeyEvent) {
+        let PhysicalKey::Code(code) = event.physical_key else {
+            return;
+        };
+        let key = match code {
+            KeyCode::KeyW => KeyState::MoveForward,
+            KeyCode::KeyS => KeyState::MoveBackward,
+            KeyCode::KeyA => KeyState::MoveLeft,
+            KeyCode::KeyD => KeyState::MoveRight,
+            KeyCode::ShiftLeft => KeyState::MoveDown,
+            KeyCode::Space => KeyState::MoveUp,
+            KeyCode::ArrowDown => KeyState::PitchDown,
+            KeyCode::ArrowUp => KeyState::PitchUp,
+            KeyCode::ArrowRight => KeyState::YawRight,
+            KeyCode::ArrowLeft => KeyState::YawLeft,
+            _ => return,
+        };
+        self.handle_movement(key, event.state.is_pressed());
     }
 }
 
@@ -306,6 +473,13 @@ impl ApplicationHandler for App {
                     .resize()
                     .context("failed to resize")
                     .unwrap();
+            }
+            WindowEvent::KeyboardInput { event, .. } => {
+                self.state
+                    .as_mut()
+                    .context("got keyboard input before initialization")
+                    .unwrap()
+                    .handle_key(event);
             }
             _ => {}
         }

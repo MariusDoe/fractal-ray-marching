@@ -36,7 +36,6 @@ fn object_union(a: Object, b: Object) -> Object {
 
 fn scene(position: vec3<f32>) -> Object {
     var p = position;
-    p += CAMERA_POSITION;
     return object_union(
         object(sphere(p, 0.5), vec3(0, 1, 0)),
         object(box(p - vec3(0.5, 0.5, -0.5), vec3(0.1)), vec3(1, 0, 0)),
@@ -47,7 +46,6 @@ const MAX_TOTAL_DISTANCE = f32(1.0e3);
 const MIN_DISTANCE = f32(5.0e-4);
 const MAX_ITERATIONS = u32(3.0e2);
 
-const CAMERA_POSITION = vec3<f32>(0, 0, -10);
 const BACKGROUND_COLOR = vec3<f32>(0);
 const SUN_DIRECTION = vec3(-1, -0.5, 1);
 const SHADOW_FACTOR = 0.7;
@@ -57,6 +55,7 @@ const OBJECT_SHADOW_SHARPNESS = 32;
 const INFINITY = pow(10, 20);
 
 struct Parameters {
+    camera_matrix: mat4x4<f32>,
     aspect_scale: vec2<f32>,
     time: f32,
 }
@@ -79,7 +78,7 @@ fn march(start_position: Position, direction: Direction) -> MarchResult {
     var closeness = INFINITY;
     for (var iteration = 0u; iteration < MAX_ITERATIONS && total_distance < MAX_TOTAL_DISTANCE; iteration++) {
         let position = start_position + total_distance * direction;
-        let object = scene(position);
+        let object = scene((vec4(position, 1) * parameters.camera_matrix).xyz);
         closeness = min(closeness, object.distance / total_distance);
         if (object.distance <= MIN_DISTANCE) {
             result.color = object.color;
