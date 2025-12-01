@@ -96,8 +96,8 @@ fn scene(position: Position) -> Object {
 }
 
 const MAX_TOTAL_DISTANCE = Distance(1.0e3);
-const MIN_DISTANCE = Distance(5.0e-4);
-const MAX_ITERATIONS = u32(3.0e2);
+const MIN_DISTANCE = Distance(5.0e-5);
+const MAX_ITERATIONS = u32(5.0e2);
 
 const BACKGROUND_COLOR = Color(0);
 const SUN_DIRECTION = Direction(-1, -0.5, 1);
