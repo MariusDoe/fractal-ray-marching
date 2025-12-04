@@ -116,7 +116,7 @@ fn menger_sponge(position: Position) -> Object {
     let size = 0.3;
     var distance = box(position, vec3(size));
     var scale = 0.5 / size;
-    for (var i = 1u; i <= num_iterations; i++) {
+    for (var i = 0u; i < num_iterations; i++) {
         distance = max(distance, -cross_inside(repeat(position * scale), 1.0 / 6.0) / scale);
         scale *= 3.0;
     }
@@ -134,7 +134,7 @@ fn scene(position: Position) -> Object {
 }
 
 const MAX_TOTAL_DISTANCE = Distance(1.0e3);
-const MIN_DISTANCE = Distance(5.0e-5);
+const MIN_DISTANCE = Distance(1.0e-5);
 const MAX_ITERATIONS = u32(5.0e2);
 
 const BACKGROUND_COLOR = Color(0);
