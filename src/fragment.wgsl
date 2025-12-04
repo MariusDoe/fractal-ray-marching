@@ -6,6 +6,8 @@ alias Position = Vector;
 alias Direction = Vector;
 alias Color = Vector;
 
+const MILKY_WHITE = Color(0.8, 0.8, 0.7);
+
 struct Object {
     distance: Distance,
     color: Color,
@@ -22,13 +24,25 @@ fn sphere(position: Position, radius: Distance) -> Distance {
     return length(position) - radius;
 }
 
-fn max_comp(a: Vector) -> Scalar {
-    return max(max(a.x, a.y), a.z);
+fn max_comp2(a: vec2<Scalar>) -> Scalar {
+    return max(a.x, a.y);
+}
+
+fn min_comp2(a: vec2<Scalar>) -> Scalar {
+    return min(a.x, a.y);
+}
+
+fn max_comp3(a: Vector) -> Scalar {
+    return max(max_comp2(a.xy), a.z);
+}
+
+fn min_comp3(a: Vector) -> Scalar {
+    return min(min_comp2(a.xy), a.z);
 }
 
 fn box(position: Position, size: Vector) -> Distance {
     let q = abs(position) - size;
-    return length(max(q, vec3(0))) + min(max_comp(q), 0);
+    return length(max(q, vec3(0))) + min(max_comp3(q), 0);
 }
 
 fn half_space(position: Position, anchor: Position, normal: Direction) -> Distance {
@@ -82,7 +96,31 @@ fn sierpinski_tetrahedron(position: Position) -> Object {
         p = mirror(p, top + distance * b_top, b_normal);
         p = mirror(p, top + distance * c_top, c_normal);
     }
-    return object(tetrahedron(p, top, a, b, c), vec3(0.8, 0.8, 0.7));
+    return object(tetrahedron(p, top, a, b, c), MILKY_WHITE);
+}
+
+fn repeat(position: Position) -> Position {
+    return fract(position + 0.5) - 0.5;
+}
+
+fn cross_inside(position: Position, size: Distance) -> Distance {
+    let p = abs(position);
+    let x = max_comp2(p.yz);
+    let y = max_comp2(p.zx);
+    let z = max_comp2(p.xy);
+    return min_comp3(vec3(x, y, z)) - size;
+}
+
+fn menger_sponge(position: Position) -> Object {
+    let num_iterations = 6u;
+    let size = 0.3;
+    var distance = box(position, vec3(size));
+    var scale = 0.5 / size;
+    for (var i = 1u; i <= num_iterations; i++) {
+        distance = max(distance, -cross_inside(repeat(position * scale), 1.0 / 6.0) / scale);
+        scale *= 3.0;
+    }
+    return object(distance, MILKY_WHITE);
 }
 
 fn test_scene(position: Position) -> Object {
@@ -92,7 +130,7 @@ fn test_scene(position: Position) -> Object {
 }
 
 fn scene(position: Position) -> Object {
-    return sierpinski_tetrahedron(position);
+    return menger_sponge(position);
 }
 
 const MAX_TOTAL_DISTANCE = Distance(1.0e3);
