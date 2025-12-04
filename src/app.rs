@@ -1,5 +1,5 @@
 use crate::state::State;
-use anyhow::Context;
+use anyhow::{Context, Result};
 use pollster::block_on;
 use winit::{
     application::ApplicationHandler, event::WindowEvent, event_loop::ActiveEventLoop,
@@ -9,6 +9,52 @@ use winit::{
 #[derive(Debug, Default)]
 pub struct App {
     state: Option<State>,
+}
+
+impl App {
+    fn state_mut(&mut self, context: &'static str) -> &mut State {
+        self.state.as_mut().context(context).unwrap()
+    }
+
+    fn handle_window_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        event: WindowEvent,
+    ) -> Result<()> {
+        match event {
+            WindowEvent::CloseRequested => {
+                event_loop.exit();
+            }
+            WindowEvent::RedrawRequested => {
+                self.state_mut("got redraw before initialization")
+                    .draw()
+                    .context("failed to draw")?;
+            }
+            WindowEvent::Resized(..) => {
+                self.state_mut("got resize before initialization")
+                    .persistent
+                    .resize()
+                    .context("failed to resize")?;
+            }
+            WindowEvent::KeyboardInput { event, .. } => {
+                self.state_mut("got keyboard input before initialization")
+                    .handle_key(event)
+                    .context("failed to handle keyboard input")?;
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                self.state_mut("got cursor movement before initialization")
+                    .handle_cursor_movement(position)
+                    .context("failed to handle cursor movement")?;
+            }
+            WindowEvent::MouseInput { state, button, .. } => {
+                self.state_mut("got mouse input before initialization")
+                    .handle_mouse(button, state)
+                    .context("failed to handle mouse input")?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
 }
 
 impl ApplicationHandler for App {
@@ -26,57 +72,6 @@ impl ApplicationHandler for App {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
-        match event {
-            WindowEvent::CloseRequested => {
-                event_loop.exit();
-            }
-            WindowEvent::RedrawRequested => {
-                self.state
-                    .as_mut()
-                    .context("got redraw before initialization")
-                    .unwrap()
-                    .draw()
-                    .context("failed to draw")
-                    .unwrap();
-            }
-            WindowEvent::Resized(..) => {
-                self.state
-                    .as_mut()
-                    .context("got resize before initialization")
-                    .unwrap()
-                    .persistent
-                    .resize()
-                    .context("failed to resize")
-                    .unwrap();
-            }
-            WindowEvent::KeyboardInput { event, .. } => {
-                self.state
-                    .as_mut()
-                    .context("got keyboard input before initialization")
-                    .unwrap()
-                    .handle_key(event)
-                    .context("failed to handle keyboard input")
-                    .unwrap();
-            }
-            WindowEvent::CursorMoved { position, .. } => {
-                self.state
-                    .as_mut()
-                    .context("got cursor movement before initialization")
-                    .unwrap()
-                    .handle_cursor_movement(position)
-                    .context("failed to handle cursor movement")
-                    .unwrap();
-            }
-            WindowEvent::MouseInput { state, button, .. } => {
-                self.state
-                    .as_mut()
-                    .context("got mouse input before initialization")
-                    .unwrap()
-                    .handle_mouse(button, state)
-                    .context("failed to handle mouse input")
-                    .unwrap();
-            }
-            _ => {}
-        }
+        self.handle_window_event(event_loop, event).unwrap();
     }
 }
