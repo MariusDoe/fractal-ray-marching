@@ -58,6 +58,13 @@ impl Camera {
         self.add_yaw(rotation_magnitude * keys.yaw_magnitude().into());
     }
 
+    const ROTATION_PER_PIXEL: Rad<f32> = Rad(0.0003);
+
+    pub fn rotate_from_cursor_movement(&mut self, yaw_pixels: f32, pitch_pixels: f32) {
+        self.add_pitch(Self::ROTATION_PER_PIXEL * pitch_pixels);
+        self.add_yaw(Self::ROTATION_PER_PIXEL * yaw_pixels);
+    }
+
     const MAX_PITCH: Rad<f32> = Rad(FRAC_PI_2);
     const MIN_PITCH: Rad<f32> = Rad(-Self::MAX_PITCH.0);
 

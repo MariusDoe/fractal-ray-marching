@@ -1,13 +1,15 @@
 use crate::{key_state::KeyState, persistent_state::PersistentState, render_state::RenderState};
-use anyhow::{Context, Result};
+use anyhow::{Context, Ok, Result};
 use wgpu::{
     Color, CommandEncoderDescriptor, LoadOp, Operations, RenderPassColorAttachment,
     RenderPassDescriptor, StoreOp, TextureViewDescriptor,
 };
 use winit::{
-    event::KeyEvent,
+    dpi::PhysicalPosition,
+    event::{ElementState, KeyEvent, MouseButton},
     event_loop::ActiveEventLoop,
-    keyboard::{KeyCode, PhysicalKey},
+    keyboard::{Key, KeyCode, NamedKey, PhysicalKey},
+    window::CursorGrabMode,
 };
 
 #[derive(Debug)]
@@ -15,6 +17,8 @@ pub struct State {
     pub persistent: PersistentState,
     render: RenderState,
     key_state: KeyState,
+    last_cursor_position: Option<PhysicalPosition<f64>>,
+    cursor_grabbed: bool,
 }
 
 impl State {
@@ -28,6 +32,8 @@ impl State {
             persistent,
             render,
             key_state,
+            cursor_grabbed: false,
+            last_cursor_position: None,
         })
     }
 
@@ -107,9 +113,13 @@ impl State {
         self.key_state.set(key, pressed);
     }
 
-    pub fn handle_key(&mut self, event: KeyEvent) {
+    pub fn handle_key(&mut self, event: KeyEvent) -> Result<()> {
+        if event.logical_key == Key::Named(NamedKey::Escape) {
+            self.ungrab_cursor()?;
+            return Ok(());
+        }
         let PhysicalKey::Code(code) = event.physical_key else {
-            return;
+            return Ok(());
         };
         let key = match code {
             KeyCode::KeyW => KeyState::MoveForward,
@@ -122,8 +132,66 @@ impl State {
             KeyCode::ArrowUp => KeyState::PitchUp,
             KeyCode::ArrowRight => KeyState::YawRight,
             KeyCode::ArrowLeft => KeyState::YawLeft,
-            _ => return,
+            _ => return Ok(()),
         };
         self.handle_movement(key, event.state.is_pressed());
+        Ok(())
+    }
+
+    pub fn handle_mouse(&mut self, button: MouseButton, state: ElementState) -> Result<()> {
+        if button == MouseButton::Left && state == ElementState::Pressed {
+            self.grab_cursor()?;
+        }
+        Ok(())
+    }
+
+    pub fn handle_cursor_movement(&mut self, position: PhysicalPosition<f64>) -> Result<()> {
+        if self.cursor_grabbed
+            && let Some(last_position) = self.last_cursor_position
+        {
+            let yaw = position.x - last_position.x;
+            let pitch = position.y - last_position.y;
+            self.render
+                .camera
+                .rotate_from_cursor_movement(yaw as f32, pitch as f32);
+            self.persistent
+                .window
+                .set_cursor_position(last_position)
+                .context("failed to lock cursor in place")?;
+        } else {
+            self.last_cursor_position = Some(position);
+        }
+        Ok(())
+    }
+
+    fn grab_cursor(&mut self) -> Result<()> {
+        if self.cursor_grabbed {
+            return Ok(());
+        }
+        const CURSOR_GRAB_MODE: CursorGrabMode = if cfg!(target_os = "macos") {
+            CursorGrabMode::Locked
+        } else {
+            CursorGrabMode::Confined
+        };
+        let window = &*self.persistent.window;
+        window
+            .set_cursor_grab(CURSOR_GRAB_MODE)
+            .context("failed to grab cursor")?;
+        window.set_cursor_visible(false);
+        self.cursor_grabbed = true;
+        Ok(())
+    }
+
+    fn ungrab_cursor(&mut self) -> Result<()> {
+        if !self.cursor_grabbed {
+            return Ok(());
+        }
+        let window = &*self.persistent.window;
+        window
+            .set_cursor_grab(CursorGrabMode::None)
+            .context("failed to ungrab cursor")?;
+        window.set_cursor_visible(true);
+        self.cursor_grabbed = false;
+        Ok(())
     }
 }
