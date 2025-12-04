@@ -1,11 +1,10 @@
-use crate::{camera::Camera, persistent_state::PersistentState, utils::create_render_pipeline};
+use crate::{persistent_state::PersistentState, utils::create_render_pipeline};
 use std::borrow::Cow;
 use wgpu::{RenderPipeline, ShaderModuleDescriptor, ShaderSource};
 
 #[derive(Debug)]
 pub struct RenderState {
     pub render_pipeline: RenderPipeline,
-    pub camera: Camera,
 }
 
 impl RenderState {
@@ -34,10 +33,6 @@ impl RenderState {
             &fragment_shader,
             surface_format,
         );
-        let camera = Camera::default();
-        Self {
-            render_pipeline,
-            camera,
-        }
+        Self { render_pipeline }
     }
 }

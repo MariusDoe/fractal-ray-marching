@@ -43,10 +43,10 @@ impl State {
             .device
             .create_command_encoder(&CommandEncoderDescriptor::default());
         let delta_time = self.persistent.update_time();
-        self.render.camera.update(self.key_state, delta_time);
+        self.persistent.camera.update(self.key_state, delta_time);
         self.persistent
             .parameters
-            .update_camera(&self.render.camera);
+            .update_camera(&self.persistent.camera);
         self.persistent.queue.write_buffer(
             &self.persistent.parameters_buffer,
             0,
@@ -151,7 +151,7 @@ impl State {
         {
             let yaw = position.x - last_position.x;
             let pitch = position.y - last_position.y;
-            self.render
+            self.persistent
                 .camera
                 .rotate_from_cursor_movement(yaw as f32, pitch as f32);
             self.persistent

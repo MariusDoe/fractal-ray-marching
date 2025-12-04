@@ -1,4 +1,4 @@
-use crate::{parameters::Parameters, utils::create_render_pipeline};
+use crate::{camera::Camera, parameters::Parameters, utils::create_render_pipeline};
 use anyhow::{Context, Result};
 use std::{
     borrow::Cow,
@@ -32,6 +32,7 @@ pub struct PersistentState {
     pub parameters_buffer: Buffer,
     pub parameters_bind_group_layout: BindGroupLayout,
     pub parameters_bind_group: BindGroup,
+    pub camera: Camera,
     start_time: Instant,
     last_frame_time: Instant,
 }
@@ -186,6 +187,7 @@ impl PersistentState {
             parameters_buffer,
             parameters_bind_group_layout,
             parameters_bind_group,
+            camera: Camera::default(),
             start_time,
             last_frame_time: start_time,
         };
