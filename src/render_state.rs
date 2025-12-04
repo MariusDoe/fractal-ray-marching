@@ -1,6 +1,10 @@
-use crate::{persistent_state::PersistentState, utils::create_render_pipeline};
-use std::borrow::Cow;
-use wgpu::{RenderPipeline, ShaderModuleDescriptor, ShaderSource};
+use crate::{
+    persistent_state::PersistentState,
+    utils::{create_render_pipeline, handle_device_errors},
+};
+use anyhow::{Context, Result};
+use std::{borrow::Cow, fs::read_to_string, path::Path};
+use wgpu::{ErrorFilter, RenderPipeline, ShaderModuleDescriptor, ShaderSource};
 
 #[derive(Debug)]
 pub struct RenderState {
@@ -8,7 +12,7 @@ pub struct RenderState {
 }
 
 impl RenderState {
-    pub fn init(persistent: &PersistentState) -> Self {
+    pub fn init(persistent: &PersistentState) -> Result<Self> {
         let PersistentState {
             device,
             surface,
@@ -17,11 +21,23 @@ impl RenderState {
             parameters_bind_group_layout,
             ..
         } = persistent;
-        let fragment_shader_source = include_str!("./fragment.wgsl");
-        let fragment_shader = device.create_shader_module(ShaderModuleDescriptor {
-            label: Some("fragment shader"),
-            source: ShaderSource::Wgsl(Cow::Borrowed(fragment_shader_source)),
-        });
+        let fragment_shader_source = if cfg!(debug_assertions) {
+            let fragment_shader_source_path =
+                Path::new(file!()).parent().unwrap().join("./fragment.wgsl");
+            Cow::Owned(
+                read_to_string(fragment_shader_source_path)
+                    .context("failed to read fragment shader source")?,
+            )
+        } else {
+            Cow::Borrowed(include_str!("./fragment.wgsl"))
+        };
+        let fragment_shader = handle_device_errors(device, ErrorFilter::Validation, || {
+            device.create_shader_module(ShaderModuleDescriptor {
+                label: Some("fragment shader"),
+                source: ShaderSource::Wgsl(fragment_shader_source),
+            })
+        })
+        .context("failed to validate fragment shader source")?;
         let surface_capabilities = surface.get_capabilities(adapter);
         let surface_format = surface_capabilities.formats[0];
         let render_pipeline = create_render_pipeline(
@@ -33,6 +49,6 @@ impl RenderState {
             &fragment_shader,
             surface_format,
         );
-        Self { render_pipeline }
+        Ok(Self { render_pipeline })
     }
 }

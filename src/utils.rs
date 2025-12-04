@@ -1,7 +1,9 @@
+use anyhow::Result;
+use pollster::block_on;
 use wgpu::{
-    BindGroupLayout, Device, FragmentState, MultisampleState, PipelineCompilationOptions,
-    PipelineLayoutDescriptor, PrimitiveState, PrimitiveTopology, RenderPipeline,
-    RenderPipelineDescriptor, ShaderModule, TextureFormat, VertexState,
+    BindGroupLayout, Device, Error, ErrorFilter, FragmentState, MultisampleState,
+    PipelineCompilationOptions, PipelineLayoutDescriptor, PrimitiveState, PrimitiveTopology,
+    RenderPipeline, RenderPipelineDescriptor, ShaderModule, TextureFormat, VertexState,
 };
 
 pub fn create_render_pipeline(
@@ -43,4 +45,16 @@ pub fn create_render_pipeline(
         multiview: None,
         cache: None,
     })
+}
+
+pub fn handle_device_errors<F, R>(device: &Device, filter: ErrorFilter, f: F) -> Result<R, Error>
+where
+    F: FnOnce() -> R,
+{
+    device.push_error_scope(filter);
+    let result = f();
+    match block_on(device.pop_error_scope()) {
+        Some(error) => Err(error),
+        None => Ok(result),
+    }
 }

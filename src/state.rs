@@ -9,7 +9,7 @@ use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, KeyEvent, MouseButton},
     event_loop::ActiveEventLoop,
-    keyboard::{Key, KeyCode, NamedKey, PhysicalKey},
+    keyboard::{Key, KeyCode, NamedKey, PhysicalKey, SmolStr},
     window::CursorGrabMode,
 };
 
@@ -27,7 +27,7 @@ impl State {
 
     pub async fn init(event_loop: &ActiveEventLoop) -> Result<Self> {
         let persistent = PersistentState::init(event_loop).await?;
-        let render = RenderState::init(&persistent);
+        let render = RenderState::init(&persistent)?;
         let key_state = KeyState::default();
         Ok(Self {
             persistent,
@@ -116,10 +116,27 @@ impl State {
         self.key_state.set(key, pressed);
     }
 
+    fn reload(&mut self) -> Result<()> {
+        self.render = RenderState::init(&self.persistent).context("failed to reload")?;
+        Ok(())
+    }
+
+    fn try_reload(&mut self) {
+        if let Err(error) = self.reload() {
+            println!("{error:?}");
+        }
+    }
+
     pub fn handle_key(&mut self, event: KeyEvent) -> Result<()> {
-        if event.logical_key == Key::Named(NamedKey::Escape) {
-            self.ungrab_cursor()?;
-            return Ok(());
+        if event.state == ElementState::Pressed {
+            if event.logical_key == Key::Named(NamedKey::Escape) {
+                self.ungrab_cursor()?;
+                return Ok(());
+            }
+            if event.logical_key == Key::Character(SmolStr::new_inline("r")) {
+                self.try_reload();
+                return Ok(());
+            }
         }
         let PhysicalKey::Code(code) = event.physical_key else {
             return Ok(());
