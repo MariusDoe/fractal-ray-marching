@@ -34,7 +34,7 @@ impl Camera {
     const ROTATION_PER_SECOND: Rad<f32> = Rad(0.5);
 
     fn forward(&self) -> Vector3<f32> {
-        self.rotation_matrix().z.truncate()
+        self.yaw_matrix().z.truncate()
     }
 
     fn right(&self) -> Vector3<f32> {
