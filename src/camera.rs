@@ -1,6 +1,6 @@
 use crate::key_state::KeyState;
-use cgmath::{InnerSpace, Matrix4, Rad, Vector3, Zero};
-use std::time::Duration;
+use cgmath::{Angle, InnerSpace, Matrix4, Rad, Vector3, Zero, num_traits::clamp};
+use std::{f32::consts::FRAC_PI_2, time::Duration};
 
 #[derive(Debug)]
 pub struct Camera {
@@ -54,8 +54,27 @@ impl Camera {
             self.position += movement.normalize_to(Self::MOVEMENT_PER_SECOND * seconds);
         }
         let rotation_magnitude = Self::ROTATION_PER_SECOND * seconds;
-        self.pitch += rotation_magnitude * keys.pitch_magnitude().into();
-        self.yaw += rotation_magnitude * keys.yaw_magnitude().into();
+        self.add_pitch(rotation_magnitude * keys.pitch_magnitude().into());
+        self.add_yaw(rotation_magnitude * keys.yaw_magnitude().into());
+    }
+
+    const MAX_PITCH: Rad<f32> = Rad(FRAC_PI_2);
+    const MIN_PITCH: Rad<f32> = Rad(-Self::MAX_PITCH.0);
+
+    fn add_pitch(&mut self, pitch: Rad<f32>) {
+        self.update_pitch(self.pitch + pitch);
+    }
+
+    fn add_yaw(&mut self, yaw: Rad<f32>) {
+        self.update_yaw(self.yaw + yaw);
+    }
+
+    fn update_pitch(&mut self, pitch: Rad<f32>) {
+        self.pitch = clamp(pitch, Self::MIN_PITCH, Self::MAX_PITCH);
+    }
+
+    fn update_yaw(&mut self, yaw: Rad<f32>) {
+        self.yaw = yaw % Rad::full_turn();
     }
 }
 
