@@ -139,6 +139,7 @@ const MAX_ITERATIONS = u32(5.0e2);
 
 const BACKGROUND_COLOR = Color(0);
 const SUN_DIRECTION = Direction(-1, -0.5, 1);
+const SUN_COLOR = Color(1);
 const SHADOW_FACTOR = 0.7;
 const SELF_SHADOW_SHARPNESS = 10;
 const OBJECT_SHADOW_SHARPNESS = 32;
@@ -205,19 +206,23 @@ fn transform_direction(direction: Direction) -> Direction {
 
 @fragment
 fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec4<Scalar> {
-    let direction = transform_direction(normalize(vec3(screen_position * parameters.aspect_scale, 5)));
-    let position = transform_position(vec3(0));
-    let object_result = march(position, direction);
+    let camera_direction = transform_direction(normalize(vec3(screen_position * parameters.aspect_scale, 5)));
+    let camera_position = transform_position(vec3(0));
+    let object_result = march(camera_position, camera_direction);
     var color = object_result.color;
     if (object_result.distance >= 0) {
-        let position = object_result.position;
-        let normal = calculate_normal(position);
+        let object_position = object_result.position;
+        let object_normal = calculate_normal(object_position);
         let to_sun = normalize(-SUN_DIRECTION);
-        let self_shadow = SELF_SHADOW_SHARPNESS * dot(normal, to_sun);
-        let sun_result = march(position + normal * 2 * MIN_DISTANCE, to_sun);
+        let self_shadow = SELF_SHADOW_SHARPNESS * dot(object_normal, to_sun);
+        let to_camera = -camera_direction;
+        let halfway = normalize(to_camera + to_sun);
+        let specular = pow(max(dot(halfway, object_normal), 0), 16);
+        let sun_result = march(object_position + object_normal * 2 * MIN_DISTANCE, to_sun);
         let object_shadow = OBJECT_SHADOW_SHARPNESS * sun_result.closeness;
         let shadow = min(self_shadow, object_shadow);
         color *= mix(SHADOW_FACTOR, 1, clamp(shadow, 0, 1));
+        color += shadow * specular * SUN_COLOR;
     }
     return vec4(color, 1);
 }
