@@ -1,4 +1,4 @@
-use crate::parameters::Parameters;
+use crate::{parameters::Parameters, utils::create_render_pipeline};
 use anyhow::{Context, Result};
 use std::{
     borrow::Cow,
@@ -9,12 +9,10 @@ use wgpu::{
     Adapter, AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
     BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType, Buffer,
     BufferBinding, BufferBindingType, BufferDescriptor, BufferUsages, Device, DeviceDescriptor,
-    Extent3d, FilterMode, FragmentState, Instance, InstanceDescriptor, MultisampleState,
-    PipelineCompilationOptions, PipelineLayoutDescriptor, PowerPreference, PrimitiveState,
-    PrimitiveTopology, Queue, RenderPipeline, RenderPipelineDescriptor, RequestAdapterOptions,
-    SamplerBindingType, SamplerDescriptor, ShaderModule, ShaderModuleDescriptor, ShaderSource,
-    ShaderStages, Surface, Texture, TextureDescriptor, TextureDimension, TextureFormat,
-    TextureSampleType, TextureUsages, TextureViewDimension, VertexState,
+    Extent3d, FilterMode, Instance, InstanceDescriptor, PowerPreference, Queue, RenderPipeline,
+    RequestAdapterOptions, SamplerBindingType, SamplerDescriptor, ShaderModule,
+    ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface, Texture, TextureDescriptor,
+    TextureDimension, TextureFormat, TextureSampleType, TextureUsages, TextureViewDimension,
     wgt::TextureViewDescriptor,
 };
 use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop, window::Window};
@@ -130,37 +128,15 @@ impl PersistentState {
                 },
             ],
         });
-        let blit_render_pipeline_layout =
-            device.create_pipeline_layout(&PipelineLayoutDescriptor {
-                label: Some("blit_render_pipeline_layout"),
-                bind_group_layouts: &[&blit_bind_group_layout],
-                push_constant_ranges: &[],
-            });
-        let blit_render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: Some("blit_render_pipeline"),
-            layout: Some(&blit_render_pipeline_layout),
-            vertex: VertexState {
-                module: &vertex_shader,
-                entry_point: Some("vertex_main"),
-                buffers: &[],
-                compilation_options: PipelineCompilationOptions::default(),
-            },
-            fragment: Some(FragmentState {
-                module: &blit_fragment_shader,
-                entry_point: Some("fragment_main"),
-                compilation_options: PipelineCompilationOptions::default(),
-                targets: &[Some(render_texture_format.into())],
-            }),
-            primitive: PrimitiveState {
-                topology: PrimitiveTopology::TriangleStrip,
-                cull_mode: None,
-                ..Default::default()
-            },
-            multisample: MultisampleState::default(),
-            depth_stencil: None,
-            multiview: None,
-            cache: None,
-        });
+        let blit_render_pipeline = create_render_pipeline(
+            &device,
+            "blit_render_pipeline_layout",
+            &blit_bind_group_layout,
+            "blit_render_pipeline",
+            &vertex_shader,
+            &blit_fragment_shader,
+            render_texture_format,
+        );
         let parameters_buffer = device.create_buffer(&BufferDescriptor {
             label: Some("parameters_buffer"),
             mapped_at_creation: false,

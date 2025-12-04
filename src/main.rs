@@ -8,6 +8,7 @@ mod parameters;
 mod persistent_state;
 mod render_state;
 mod state;
+mod utils;
 
 fn main() {
     let event_loop = EventLoop::new().unwrap();
