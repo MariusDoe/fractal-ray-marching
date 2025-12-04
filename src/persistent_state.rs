@@ -1,4 +1,6 @@
-use crate::{camera::Camera, parameters::Parameters, utils::create_render_pipeline};
+use crate::{
+    camera::Camera, key_state::KeyState, parameters::Parameters, utils::create_render_pipeline,
+};
 use anyhow::{Context, Result};
 use std::{
     borrow::Cow,
@@ -206,7 +208,18 @@ impl PersistentState {
         Ok(())
     }
 
-    pub fn update_time(&mut self) -> Duration {
+    pub fn update(&mut self, key_state: KeyState) {
+        let delta_time = self.update_time();
+        self.camera.update(key_state, delta_time);
+        self.parameters.update_camera(&self.camera);
+        self.queue.write_buffer(
+            &self.parameters_buffer,
+            0,
+            bytemuck::cast_slice(&[self.parameters]),
+        );
+    }
+
+    fn update_time(&mut self) -> Duration {
         let now = Instant::now();
         let delta_time = now - self.last_frame_time;
         self.parameters.update_time(now - self.start_time);

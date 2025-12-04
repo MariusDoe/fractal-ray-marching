@@ -1,8 +1,9 @@
 use crate::{key_state::KeyState, persistent_state::PersistentState, render_state::RenderState};
 use anyhow::{Context, Ok, Result};
 use wgpu::{
-    Color, CommandEncoderDescriptor, LoadOp, Operations, RenderPassColorAttachment,
-    RenderPassDescriptor, StoreOp, TextureViewDescriptor,
+    BindGroup, Color, CommandEncoder, CommandEncoderDescriptor, LoadOp, Operations,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TextureView,
+    TextureViewDescriptor,
 };
 use winit::{
     dpi::PhysicalPosition,
@@ -38,75 +39,77 @@ impl State {
     }
 
     pub fn draw(&mut self) -> Result<()> {
+        self.update();
+        self.render()?;
+        Ok(())
+    }
+
+    fn update(&mut self) {
+        self.persistent.update(self.key_state);
+    }
+
+    fn render(&mut self) -> Result<()> {
         let mut encoder = self
             .persistent
             .device
             .create_command_encoder(&CommandEncoderDescriptor::default());
-        let delta_time = self.persistent.update_time();
-        self.persistent.camera.update(self.key_state, delta_time);
-        self.persistent
-            .parameters
-            .update_camera(&self.persistent.camera);
-        self.persistent.queue.write_buffer(
-            &self.persistent.parameters_buffer,
-            0,
-            bytemuck::cast_slice(&[self.persistent.parameters]),
+        let render_texture_view = self
+            .persistent
+            .render_texture
+            .create_view(&TextureViewDescriptor::default());
+        self.do_render_pass(
+            &mut encoder,
+            "render_pass",
+            &render_texture_view,
+            &self.render.render_pipeline,
+            &self.persistent.parameters_bind_group,
         );
-        {
-            let view = self
-                .persistent
-                .render_texture
-                .create_view(&TextureViewDescriptor::default());
-            let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("render_pass"),
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: &view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: Operations {
-                        load: LoadOp::Clear(Self::CLEAR_COLOR),
-                        store: StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-            render_pass.set_pipeline(&self.render.render_pipeline);
-            render_pass.set_bind_group(0, &self.persistent.parameters_bind_group, &[]);
-            render_pass.draw(0..4, 0..1);
-        }
         let frame = self
             .persistent
             .surface
             .get_current_texture()
             .context("failed to get frame texture")?;
-        {
-            let view = frame.texture.create_view(&TextureViewDescriptor::default());
-            let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("blit pass"),
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: &view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: Operations {
-                        load: LoadOp::Clear(Self::CLEAR_COLOR),
-                        store: StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-            render_pass.set_pipeline(&self.persistent.blit_render_pipeline);
-            render_pass.set_bind_group(0, &self.persistent.blit_bind_group, &[]);
-            render_pass.draw(0..4, 0..1);
-        }
+        let frame_texture_view = frame.texture.create_view(&TextureViewDescriptor::default());
+        self.do_render_pass(
+            &mut encoder,
+            "blit_render_pass",
+            &frame_texture_view,
+            &self.persistent.blit_render_pipeline,
+            &self.persistent.blit_bind_group,
+        );
         self.persistent.queue.submit(Some(encoder.finish()));
         self.persistent.window.pre_present_notify();
         frame.present();
         self.persistent.window.request_redraw();
         Ok(())
+    }
+
+    fn do_render_pass(
+        &self,
+        encoder: &mut CommandEncoder,
+        label: &'static str,
+        view: &TextureView,
+        render_pipeline: &RenderPipeline,
+        bind_group: &BindGroup,
+    ) {
+        let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
+            label: Some(label),
+            color_attachments: &[Some(RenderPassColorAttachment {
+                view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: Operations {
+                    load: LoadOp::Clear(Self::CLEAR_COLOR),
+                    store: StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+        });
+        render_pass.set_pipeline(render_pipeline);
+        render_pass.set_bind_group(0, bind_group, &[]);
+        render_pass.draw(0..4, 0..1);
     }
 
     fn handle_movement(&mut self, key: KeyState, pressed: bool) {
