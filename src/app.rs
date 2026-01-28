@@ -2,7 +2,9 @@ use crate::state::State;
 use anyhow::{Context, Result};
 use pollster::block_on;
 use winit::{
-    application::ApplicationHandler, event::WindowEvent, event_loop::ActiveEventLoop,
+    application::ApplicationHandler,
+    event::WindowEvent,
+    event_loop::ActiveEventLoop,
     window::WindowId,
 };
 
@@ -50,6 +52,11 @@ impl App {
                 self.state_mut("got mouse input before initialization")
                     .handle_mouse(button, state)
                     .context("failed to handle mouse input")?;
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                self.state_mut("got mouse wheel before initializtation")
+                    .handle_mouse_wheel(delta)
+                    .context("failed to handle mouse wheel")?;
             }
             _ => {}
         }

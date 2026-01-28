@@ -4,6 +4,7 @@ use std::{f32::consts::FRAC_PI_2, time::Duration};
 
 #[derive(Debug)]
 pub struct Camera {
+    movement_per_second: f32,
     position: Vector3<f32>,
     pitch: Rad<f32>,
     yaw: Rad<f32>,
@@ -30,7 +31,6 @@ impl Camera {
         self.position_matrix() * self.rotation_matrix()
     }
 
-    const MOVEMENT_PER_SECOND: f32 = 1.5;
     const ROTATION_PER_SECOND: Rad<f32> = Rad(0.5);
 
     fn forward(&self) -> Vector3<f32> {
@@ -45,13 +45,17 @@ impl Camera {
         Vector3::unit_y()
     }
 
+    pub fn update_speed(&mut self, delta: f32) {
+        self.movement_per_second *= (delta * 0.05).exp();
+    }
+
     pub fn update(&mut self, keys: KeyState, delta_time: Duration) {
         let seconds = delta_time.as_secs_f32();
         let movement = self.forward() * keys.forward_magnitude().into()
             + self.right() * keys.right_magnitude().into()
             + self.up() * keys.up_magnitude().into();
         if !movement.is_zero() {
-            self.position += movement.normalize_to(Self::MOVEMENT_PER_SECOND * seconds);
+            self.position += movement.normalize_to(self.movement_per_second * seconds);
         }
         let rotation_magnitude = Self::ROTATION_PER_SECOND * seconds;
         self.add_pitch(rotation_magnitude * keys.pitch_magnitude().into());
@@ -88,6 +92,7 @@ impl Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self {
+            movement_per_second: 1.0,
             position: Vector3::zero(),
             pitch: Rad::zero(),
             yaw: Rad::zero(),

@@ -7,7 +7,7 @@ use wgpu::{
 };
 use winit::{
     dpi::PhysicalPosition,
-    event::{ElementState, KeyEvent, MouseButton},
+    event::{ElementState, KeyEvent, MouseButton, MouseScrollDelta},
     event_loop::ActiveEventLoop,
     keyboard::{Key, KeyCode, NamedKey, PhysicalKey, SmolStr},
     window::CursorGrabMode,
@@ -170,6 +170,15 @@ impl State {
         if button == MouseButton::Left && state == ElementState::Pressed {
             self.grab_cursor()?;
         }
+        Ok(())
+    }
+
+    pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) -> Result<()> {
+        let y_delta = match delta {
+            MouseScrollDelta::LineDelta(_x, y) => y,
+            MouseScrollDelta::PixelDelta(PhysicalPosition { y, .. }) => y as f32,
+        };
+        self.persistent.camera.update_speed(y_delta);
         Ok(())
     }
 
