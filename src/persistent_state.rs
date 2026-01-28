@@ -67,8 +67,8 @@ impl PersistentState {
             label: Some("render_texture"),
             dimension: TextureDimension::D2,
             size: Extent3d {
-                width: 1280,
-                height: 720,
+                width: 1920,
+                height: 1080,
                 ..Default::default()
             },
             mip_level_count: 1,
