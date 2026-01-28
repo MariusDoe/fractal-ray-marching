@@ -131,6 +131,8 @@ impl PersistentState {
                 },
             ],
         });
+        let surface_capabilities = surface.get_capabilities(&adapter);
+        let surface_format = surface_capabilities.formats[0];
         let blit_render_pipeline = create_render_pipeline(
             &device,
             "blit_render_pipeline_layout",
@@ -138,7 +140,7 @@ impl PersistentState {
             "blit_render_pipeline",
             &vertex_shader,
             &blit_fragment_shader,
-            render_texture_format,
+            surface_format,
         );
         let parameters_buffer = device.create_buffer(&BufferDescriptor {
             label: Some("parameters_buffer"),

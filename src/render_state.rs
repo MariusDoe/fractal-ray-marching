@@ -15,10 +15,9 @@ impl RenderState {
     pub fn init(persistent: &PersistentState) -> Result<Self> {
         let PersistentState {
             device,
-            surface,
-            adapter,
             vertex_shader,
             parameters_bind_group_layout,
+            render_texture,
             ..
         } = persistent;
         let fragment_shader_source = if cfg!(debug_assertions) {
@@ -38,8 +37,6 @@ impl RenderState {
             })
         })
         .context("failed to validate fragment shader source")?;
-        let surface_capabilities = surface.get_capabilities(adapter);
-        let surface_format = surface_capabilities.formats[0];
         let render_pipeline = create_render_pipeline(
             device,
             "render_pipeline_layout",
@@ -47,7 +44,7 @@ impl RenderState {
             "render_pipeline",
             vertex_shader,
             &fragment_shader,
-            surface_format,
+            render_texture.format(),
         );
         Ok(Self { render_pipeline })
     }
