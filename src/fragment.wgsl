@@ -74,9 +74,8 @@ fn mirror(position: Position, anchor: Position, normal: Direction) -> Position {
 }
 
 fn sierpinski_tetrahedron(position: Position) -> Object {
-    let num_iterations = 6u;
     let base_scale_factor = 0.1;
-    let scale_factor = base_scale_factor / Scalar(1 << num_iterations);
+    let scale_factor = base_scale_factor / Scalar(1 << parameters.num_iterations);
     let height = 4 / sqrt(6);
     let top = vec3(0, height * base_scale_factor, 0);
     let one_over_sqrt_3 = 1 / sqrt(3);
@@ -90,7 +89,7 @@ fn sierpinski_tetrahedron(position: Position) -> Object {
     let b_normal = normalize(top - b);
     let c_normal = normalize(top - c);
     var p = position;
-    for (var i = i32(num_iterations) - 1; i >= 0; i--) {
+    for (var i = i32(parameters.num_iterations) - 1; i >= 0; i--) {
         let distance = Scalar(1 << u32(i));
         p = mirror(p, top + distance * a_top, a_normal);
         p = mirror(p, top + distance * b_top, b_normal);
@@ -112,11 +111,10 @@ fn cross_inside(position: Position, size: Distance) -> Distance {
 }
 
 fn menger_sponge(position: Position) -> Object {
-    let num_iterations = 6u;
     let size = 0.3;
     var distance = box(position, vec3(size));
     var scale = 0.5 / size;
-    for (var i = 0u; i < num_iterations; i++) {
+    for (var i = 0u; i < parameters.num_iterations; i++) {
         distance = max(distance, -cross_inside(repeat(position * scale), 1.0 / 6.0) / scale);
         scale *= 3.0;
     }
@@ -150,6 +148,7 @@ struct Parameters {
     camera_matrix: mat4x4<Scalar>,
     aspect_scale: vec2<Scalar>,
     time: Scalar,
+    num_iterations: u32,
 }
 
 @group(0) @binding(0) var<uniform> parameters: Parameters;

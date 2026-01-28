@@ -137,6 +137,14 @@ impl State {
                 self.try_reload();
                 return Ok(());
             }
+            if event.logical_key == Key::Character(SmolStr::new_inline("+")) {
+                self.persistent.parameters.update_num_iterations(1);
+                return Ok(());
+            }
+            if event.logical_key == Key::Character(SmolStr::new_inline("-")) {
+                self.persistent.parameters.update_num_iterations(-1);
+                return Ok(());
+            }
         }
         let PhysicalKey::Code(code) = event.physical_key else {
             return Ok(());

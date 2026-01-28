@@ -9,7 +9,7 @@ pub struct Parameters {
     camera_matrix: [[f32; 4]; 4],
     aspect_scale: [f32; 2],
     time: f32,
-    padding: [u8; 4],
+    num_iterations: u32,
 }
 
 impl Parameters {
@@ -24,5 +24,9 @@ impl Parameters {
 
     pub fn update_time(&mut self, time: Duration) {
         self.time = time.as_secs_f32();
+    }
+
+    pub fn update_num_iterations(&mut self, delta: i32) {
+        self.num_iterations = self.num_iterations.saturating_add_signed(delta);
     }
 }
