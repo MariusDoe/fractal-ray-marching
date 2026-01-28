@@ -182,6 +182,13 @@ impl State {
         Ok(())
     }
 
+    pub fn handle_focused(&mut self, focused: bool) -> Result<()> {
+        if !focused {
+            self.ungrab_cursor()?;
+        }
+        Ok(())
+    }
+
     pub fn handle_cursor_movement(&mut self, position: PhysicalPosition<f64>) -> Result<()> {
         if self.cursor_grabbed
             && let Some(last_position) = self.last_cursor_position

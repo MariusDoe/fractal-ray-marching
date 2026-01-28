@@ -2,9 +2,7 @@ use crate::state::State;
 use anyhow::{Context, Result};
 use pollster::block_on;
 use winit::{
-    application::ApplicationHandler,
-    event::WindowEvent,
-    event_loop::ActiveEventLoop,
+    application::ApplicationHandler, event::WindowEvent, event_loop::ActiveEventLoop,
     window::WindowId,
 };
 
@@ -58,6 +56,10 @@ impl App {
                     .handle_mouse_wheel(delta)
                     .context("failed to handle mouse wheel")?;
             }
+            WindowEvent::Focused(focused) => self
+                .state_mut("got focused before initialization")
+                .handle_focused(focused)
+                .context("failed to handle focused")?,
             _ => {}
         }
         Ok(())
