@@ -74,7 +74,7 @@ fn mirror(position: Position, anchor: Position, normal: Direction) -> Position {
 }
 
 fn sierpinski_tetrahedron(position: Position) -> Object {
-    let base_scale_factor = 0.1;
+    let base_scale_factor = 0.5;
     let scale_factor = base_scale_factor / Scalar(1 << parameters.num_iterations);
     let height = 4 / sqrt(6);
     let top = vec3(0, height * base_scale_factor, 0);
@@ -89,6 +89,7 @@ fn sierpinski_tetrahedron(position: Position) -> Object {
     let b_normal = normalize(top - b);
     let c_normal = normalize(top - c);
     var p = position;
+    p.y += height * base_scale_factor * 0.5;
     for (var i = i32(parameters.num_iterations) - 1; i >= 0; i--) {
         let distance = Scalar(1 << u32(i));
         p = mirror(p, top + distance * a_top, a_normal);
@@ -111,7 +112,7 @@ fn cross_inside(position: Position, size: Distance) -> Distance {
 }
 
 fn menger_sponge(position: Position) -> Object {
-    let size = 0.3;
+    let size = 0.5;
     var distance = box(position, vec3(size));
     var scale = 0.5 / size;
     for (var i = 0u; i < parameters.num_iterations; i++) {
