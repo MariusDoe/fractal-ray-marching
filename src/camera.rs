@@ -1,10 +1,14 @@
 use crate::key_state::KeyState;
-use cgmath::{Angle, InnerSpace, Matrix4, Rad, Vector3, Zero, num_traits::clamp};
-use std::{f32::consts::FRAC_PI_2, time::Duration};
+use cgmath::{Angle, InnerSpace, Matrix3, Matrix4, Rad, Vector2, Vector3, Zero, num_traits::clamp};
+use std::{
+    f32::consts::{FRAC_PI_2, TAU},
+    time::Duration,
+};
 
 #[derive(Debug)]
 pub struct Camera {
     movement_per_second: f32,
+    orbiting: bool,
     position: Vector3<f32>,
     pitch: Rad<f32>,
     yaw: Rad<f32>,
@@ -49,8 +53,19 @@ impl Camera {
         self.movement_per_second *= (delta * 0.05).exp();
     }
 
+    pub fn toggle_orbiting(&mut self) {
+        self.orbiting = !self.orbiting;
+    }
+
     pub fn update(&mut self, keys: KeyState, delta_time: Duration) {
         let seconds = delta_time.as_secs_f32();
+        self.do_movement(keys, seconds);
+        if self.orbiting {
+            self.do_orbit(seconds);
+        }
+    }
+
+    fn do_movement(&mut self, keys: KeyState, seconds: f32) {
         let movement = self.forward() * keys.forward_magnitude().into()
             + self.right() * keys.right_magnitude().into()
             + self.up() * keys.up_magnitude().into();
@@ -60,6 +75,15 @@ impl Camera {
         let rotation_magnitude = Self::ROTATION_PER_SECOND * seconds;
         self.add_pitch(rotation_magnitude * keys.pitch_magnitude().into());
         self.add_yaw(rotation_magnitude * keys.yaw_magnitude().into());
+    }
+
+    fn do_orbit(&mut self, seconds: f32) {
+        let xz = Vector2::new(self.position.x, self.position.z);
+        let radius = xz.magnitude();
+        let rotation = Matrix3::from_angle_y(Rad(self.movement_per_second * seconds / TAU));
+        self.position = rotation * self.position;
+        self.yaw = Rad::atan2(-self.position.x, -self.position.z);
+        self.pitch = Rad::atan2(self.position.y, radius);
     }
 
     const ROTATION_PER_PIXEL: Rad<f32> = Rad(0.0003);
@@ -93,6 +117,7 @@ impl Default for Camera {
     fn default() -> Self {
         Self {
             movement_per_second: 1.0,
+            orbiting: false,
             position: Vector3::zero(),
             pitch: Rad::zero(),
             yaw: Rad::zero(),
