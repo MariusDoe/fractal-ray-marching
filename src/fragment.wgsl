@@ -158,32 +158,38 @@ struct MarchResult {
     position: Position,
     distance: Distance,
     color: Color,
-    closeness: Scalar,
+    closest_distance: Distance,
     steps: u32,
+    hit: bool,
 }
 
 fn march(start_position: Position, direction: Direction) -> MarchResult {
-    var result: MarchResult;
-    result.position = start_position;
-    result.distance = -INFINITY;
-    result.color = BACKGROUND_COLOR;
+    var position = start_position;
+    var closest_distance = INFINITY;
+    var color = Color(0);
     var total_distance: f32 = 0;
-    var closeness = INFINITY;
     var iteration = 0u;
+    var hit = false;
     for (; iteration < MAX_ITERATIONS && total_distance < MAX_TOTAL_DISTANCE; iteration++) {
-        let position = start_position + total_distance * direction;
+        position = start_position + total_distance * direction;
         let object = scene(position);
-        closeness = min(closeness, object.distance / total_distance);
+        closest_distance = min(closest_distance, object.distance);
+        if (closest_distance == object.distance) {
+            color = object.color;
+        }
         if (object.distance <= MIN_DISTANCE) {
-            result.color = object.color;
-            result.distance = total_distance;
-            result.position = position;
+            hit = true;
             break;
         }
         total_distance += object.distance;
     }
-    result.closeness = closeness;
+    var result: MarchResult;
+    result.position = position;
+    result.distance = total_distance;
+    result.closest_distance = closest_distance;
+    result.color = color;
     result.steps = iteration;
+    result.hit = hit;
     return result;
 }
 
@@ -212,8 +218,9 @@ fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec
     let camera_direction = transform_direction(normalize(vec3(screen_position * parameters.aspect_scale, 5)));
     let camera_position = transform_position(vec3(0));
     let object_result = march(camera_position, camera_direction);
-    var color = object_result.color;
-    if (object_result.distance >= 0) {
+    var color = BACKGROUND_COLOR;
+    if (object_result.hit) {
+        color = object_result.color;
         let object_position = object_result.position;
         let object_normal = calculate_normal(object_position);
         let to_sun = normalize(-SUN_DIRECTION);
@@ -222,11 +229,13 @@ fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec
         let halfway = normalize(to_camera + to_sun);
         let specular = pow(max(dot(halfway, object_normal), 0), 16);
         let sun_result = march(object_position + object_normal * 2 * MIN_DISTANCE, to_sun);
-        let object_shadow = OBJECT_SHADOW_SHARPNESS * sun_result.closeness;
+        let object_shadow = OBJECT_SHADOW_SHARPNESS * sun_result.closest_distance / sun_result.distance;
         let shadow = min(self_shadow, object_shadow);
         color *= mix(0.2, 1.0, pow(1.0 - f32(object_result.steps) / f32(MAX_ITERATIONS), 60));
         color *= mix(SHADOW_FACTOR, 1, clamp(shadow, 0, 1));
         color += shadow * specular * SUN_COLOR;
+    } else {
+        color += object_result.color * 5 * max(0.02 - object_result.closest_distance, 0);
     }
     return vec4(color, 1);
 }
