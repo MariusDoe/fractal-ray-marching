@@ -159,6 +159,7 @@ struct MarchResult {
     distance: Distance,
     color: Color,
     closeness: Scalar,
+    steps: u32,
 }
 
 fn march(start_position: Position, direction: Direction) -> MarchResult {
@@ -168,7 +169,8 @@ fn march(start_position: Position, direction: Direction) -> MarchResult {
     result.color = BACKGROUND_COLOR;
     var total_distance: f32 = 0;
     var closeness = INFINITY;
-    for (var iteration = 0u; iteration < MAX_ITERATIONS && total_distance < MAX_TOTAL_DISTANCE; iteration++) {
+    var iteration = 0u;
+    for (; iteration < MAX_ITERATIONS && total_distance < MAX_TOTAL_DISTANCE; iteration++) {
         let position = start_position + total_distance * direction;
         let object = scene(position);
         closeness = min(closeness, object.distance / total_distance);
@@ -181,6 +183,7 @@ fn march(start_position: Position, direction: Direction) -> MarchResult {
         total_distance += object.distance;
     }
     result.closeness = closeness;
+    result.steps = iteration;
     return result;
 }
 
@@ -221,6 +224,7 @@ fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec
         let sun_result = march(object_position + object_normal * 2 * MIN_DISTANCE, to_sun);
         let object_shadow = OBJECT_SHADOW_SHARPNESS * sun_result.closeness;
         let shadow = min(self_shadow, object_shadow);
+        color *= mix(0.2, 1.0, pow(1.0 - f32(object_result.steps) / f32(MAX_ITERATIONS), 60));
         color *= mix(SHADOW_FACTOR, 1, clamp(shadow, 0, 1));
         color += shadow * specular * SUN_COLOR;
     }
