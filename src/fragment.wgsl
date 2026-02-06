@@ -124,6 +124,34 @@ fn menger_sponge(position: Position) -> Object {
     return object(distance, colorize(position));
 }
 
+fn repeat_rotational(position: vec2<Scalar>, num_copies: u32) -> vec2<Scalar> {
+    let step_angle = TWO_PI / Scalar(num_copies);
+    let angle = atan2(position.y, position.x);
+    let angle_offset = step_angle * floor((angle - step_angle / 4) / step_angle);
+    return mat2x2(cos(angle_offset), -sin(angle_offset), sin(angle_offset), cos(angle_offset)) * position;
+}
+
+fn koch3D(position: Position) -> Object {
+    var p = position;
+    let top = Position(0, 1, 0);
+    let sqrt3 = sqrt(3);
+    var offset = sqrt(3 * 3 - 1.5 * 1.5) - sqrt3;
+    let left = Position(-1.5, 0, -offset);
+    let right = Position(1.5, 0, -offset);
+    let back = Position(0, 0, sqrt3);
+    var scale_factor = 1.0;
+    for (var i = 0u; i < parameters.num_iterations; i++) {
+        let factor = 3.0 / 2.0;
+        scale_factor *= factor;
+        p *= factor;
+        let repeated = repeat_rotational(p.xz, 3);
+        p = vec3(p.y, repeated.x, repeated.y);
+        p.z -= offset;
+    }
+    p.y = abs(p.y);
+    return object(tetrahedron(p, top, left, right, back) / scale_factor, colorize(position));
+}
+
 fn test_scene(position: Position) -> Object {
     return object_union(
         object(sphere(position, 0.5), vec3(0, 1, 0)),
@@ -137,6 +165,9 @@ fn scene(position: Position) -> Object {
         }
         case 1: {
             return sierpinski_tetrahedron(position);
+        }
+        case 2: {
+            return koch3D(position);
         }
     }
 }
@@ -153,6 +184,7 @@ const SELF_SHADOW_SHARPNESS = 10;
 const OBJECT_SHADOW_SHARPNESS = 32;
 const FOV_DEGREES = 90;
 const PI = 3.141592653589793238;
+const TWO_PI = 2 * PI;
 const CAMERA_DIRECTION_DEPTH = 1 / atan(FOV_DEGREES * PI / 180);
 
 const INFINITY = pow(10, 20);

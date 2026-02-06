@@ -32,7 +32,7 @@ impl Parameters {
         self.num_iterations = self.num_iterations.saturating_add_signed(delta);
     }
 
-    const NUM_SCENES: u32 = 2;
+    const NUM_SCENES: u32 = 3;
 
     pub fn next_scene(&mut self) {
         self.scene_index += 1;
