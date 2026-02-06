@@ -37,6 +37,8 @@ pub struct PersistentState {
     pub camera: Camera,
     start_time: Instant,
     last_frame_time: Instant,
+    last_fps_log: Instant,
+    frames_since_last_fps_log: u32,
 }
 
 impl PersistentState {
@@ -194,6 +196,8 @@ impl PersistentState {
             camera: Camera::default(),
             start_time,
             last_frame_time: start_time,
+            last_fps_log: start_time,
+            frames_since_last_fps_log: 0,
         };
         state.resize().context("failed to resize the surface")?;
         Ok(state)
@@ -221,11 +225,21 @@ impl PersistentState {
         );
     }
 
+    const FPS_LOG_INTERVAL: Duration = Duration::from_secs(1);
+
     fn update_time(&mut self) -> Duration {
         let now = Instant::now();
         let delta_time = now - self.last_frame_time;
         self.parameters.update_time(now - self.start_time);
         self.last_frame_time = now;
+        self.frames_since_last_fps_log += 1;
+        let time_since_last_fps_log = now - self.last_fps_log;
+        if time_since_last_fps_log >= Self::FPS_LOG_INTERVAL {
+            let fps = self.frames_since_last_fps_log as f32 / time_since_last_fps_log.as_secs_f32();
+            eprintln!("{fps:.1} FPS");
+            self.last_fps_log = now;
+            self.frames_since_last_fps_log = 0;
+        }
         delta_time
     }
 }
