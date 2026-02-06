@@ -118,7 +118,7 @@ impl Default for Camera {
         Self {
             movement_per_second: 1.0,
             orbiting: false,
-            position: Vector3::zero(),
+            position: Vector3::new(0.0, 0.0, -1.0),
             pitch: Rad::zero(),
             yaw: Rad::zero(),
         }
