@@ -152,12 +152,6 @@ fn koch3D(position: Position) -> Object {
     return object(tetrahedron(p, top, left, right, back) / scale_factor, colorize(position));
 }
 
-fn test_scene(position: Position) -> Object {
-    return object_union(
-        object(sphere(position, 0.5), vec3(0, 1, 0)),
-        object(box(position - vec3(0.5, 0.5, -0.5), vec3(0.1)), vec3(1, 0, 0)));
-}
-
 fn scene(position: Position) -> Object {
     switch (parameters.scene_index) {
         case 0, default: {
