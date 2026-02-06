@@ -6,8 +6,6 @@ alias Position = Vector;
 alias Direction = Vector;
 alias Color = Vector;
 
-const MILKY_WHITE = Color(0.8, 0.8, 0.7);
-
 struct Object {
     distance: Distance,
     color: Color,
@@ -18,6 +16,10 @@ fn object(distance: Distance, color: Color) -> Object {
     object.distance = distance;
     object.color = color;
     return object;
+}
+
+fn colorize(position: Position) -> Color {
+    return min(Color(1), position + 0.5);
 }
 
 fn sphere(position: Position, radius: Distance) -> Distance {
@@ -96,7 +98,7 @@ fn sierpinski_tetrahedron(position: Position) -> Object {
         p = mirror(p, top + distance * b_top, b_normal);
         p = mirror(p, top + distance * c_top, c_normal);
     }
-    return object(tetrahedron(p, top, a, b, c), MILKY_WHITE);
+    return object(tetrahedron(p, top, a, b, c), colorize(1.5 * position));
 }
 
 fn repeat(position: Position) -> Position {
@@ -119,7 +121,7 @@ fn menger_sponge(position: Position) -> Object {
         distance = max(distance, -cross_inside(repeat(position * scale), 1.0 / 6.0) / scale);
         scale *= 3.0;
     }
-    return object(distance, MILKY_WHITE);
+    return object(distance, colorize(position));
 }
 
 fn test_scene(position: Position) -> Object {
