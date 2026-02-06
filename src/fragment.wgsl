@@ -194,6 +194,7 @@ fn march(start_position: Position, direction: Direction) -> MarchResult {
 }
 
 fn calculate_normal(position: Position) -> Direction {
+    // adapted from here (Tetrahedron technique): https://iquilezles.org/articles/normalsSDF/
     let k = vec2<Scalar>(1, -1);
     return normalize(k.xyy * scene(position + k.xyy * MIN_DISTANCE).distance +
                      k.yyx * scene(position + k.yyx * MIN_DISTANCE).distance +
