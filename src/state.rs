@@ -149,6 +149,10 @@ impl State {
                 self.persistent.camera.toggle_orbiting();
                 return Ok(());
             }
+            if event.logical_key == Key::Character(SmolStr::new_inline("n")) {
+                self.persistent.parameters.next_scene();
+                return Ok(());
+            }
         }
         let PhysicalKey::Code(code) = event.physical_key else {
             return Ok(());

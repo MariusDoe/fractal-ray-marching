@@ -10,6 +10,8 @@ pub struct Parameters {
     aspect_scale: [f32; 2],
     time: f32,
     num_iterations: u32,
+    scene_index: u32,
+    padding: [u8; 12],
 }
 
 impl Parameters {
@@ -28,5 +30,12 @@ impl Parameters {
 
     pub fn update_num_iterations(&mut self, delta: i32) {
         self.num_iterations = self.num_iterations.saturating_add_signed(delta);
+    }
+
+    const NUM_SCENES: u32 = 2;
+
+    pub fn next_scene(&mut self) {
+        self.scene_index += 1;
+        self.scene_index %= Self::NUM_SCENES;
     }
 }

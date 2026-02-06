@@ -129,7 +129,14 @@ fn test_scene(position: Position) -> Object {
 }
 
 fn scene(position: Position) -> Object {
-    return menger_sponge(position);
+    switch (parameters.scene_index) {
+        case 0, default: {
+            return menger_sponge(position);
+        }
+        case 1: {
+            return sierpinski_tetrahedron(position);
+        }
+    }
 }
 
 const MAX_TOTAL_DISTANCE = Distance(1.0e3);
@@ -150,6 +157,7 @@ struct Parameters {
     aspect_scale: vec2<Scalar>,
     time: Scalar,
     num_iterations: u32,
+    scene_index: u32,
 }
 
 @group(0) @binding(0) var<uniform> parameters: Parameters;
