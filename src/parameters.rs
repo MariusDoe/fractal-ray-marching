@@ -34,8 +34,8 @@ impl Parameters {
 
     const NUM_SCENES: u32 = 3;
 
-    pub fn next_scene(&mut self) {
-        self.scene_index += 1;
-        self.scene_index %= Self::NUM_SCENES;
+    pub fn update_scene_index(&mut self, delta: i32) {
+        self.scene_index =
+            (self.scene_index as i32 + delta).rem_euclid(Self::NUM_SCENES as i32) as u32;
     }
 }

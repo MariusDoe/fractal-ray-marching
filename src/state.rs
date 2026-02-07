@@ -145,7 +145,8 @@ impl State {
                 "+" => self.persistent.parameters.update_num_iterations(1),
                 "-" => self.persistent.parameters.update_num_iterations(-1),
                 "o" => self.persistent.camera.toggle_orbiting(),
-                "n" => self.persistent.parameters.next_scene(),
+                "n" => self.persistent.parameters.update_scene_index(1),
+                "b" => self.persistent.parameters.update_scene_index(-1),
             );
         }
         let PhysicalKey::Code(code) = event.physical_key else {
