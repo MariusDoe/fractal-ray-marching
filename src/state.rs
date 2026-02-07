@@ -9,7 +9,7 @@ use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, KeyEvent, MouseButton, MouseScrollDelta},
     event_loop::ActiveEventLoop,
-    keyboard::{Key, KeyCode, NamedKey, PhysicalKey, SmolStr},
+    keyboard::{KeyCode, NamedKey, PhysicalKey},
     window::CursorGrabMode,
 };
 
@@ -129,30 +129,24 @@ impl State {
 
     pub fn handle_key(&mut self, event: KeyEvent) -> Result<()> {
         if event.state == ElementState::Pressed {
-            if event.logical_key == Key::Named(NamedKey::Escape) {
-                self.ungrab_cursor()?;
-                return Ok(());
+            macro_rules! handle_keys {
+                ($($key:expr => $body:stmt),* $(,)?) => {
+                    $(
+                        if event.logical_key == $key {
+                            $body
+                            return Ok(());
+                        }
+                    )*
+                };
             }
-            if event.logical_key == Key::Character(SmolStr::new_inline("r")) {
-                self.try_reload();
-                return Ok(());
-            }
-            if event.logical_key == Key::Character(SmolStr::new_inline("+")) {
-                self.persistent.parameters.update_num_iterations(1);
-                return Ok(());
-            }
-            if event.logical_key == Key::Character(SmolStr::new_inline("-")) {
-                self.persistent.parameters.update_num_iterations(-1);
-                return Ok(());
-            }
-            if event.logical_key == Key::Character(SmolStr::new_inline("o")) {
-                self.persistent.camera.toggle_orbiting();
-                return Ok(());
-            }
-            if event.logical_key == Key::Character(SmolStr::new_inline("n")) {
-                self.persistent.parameters.next_scene();
-                return Ok(());
-            }
+            handle_keys!(
+                NamedKey::Escape => self.ungrab_cursor()?,
+                "r" => self.try_reload(),
+                "+" => self.persistent.parameters.update_num_iterations(1),
+                "-" => self.persistent.parameters.update_num_iterations(-1),
+                "o" => self.persistent.camera.toggle_orbiting(),
+                "n" => self.persistent.parameters.next_scene(),
+            );
         }
         let PhysicalKey::Code(code) = event.physical_key else {
             return Ok(());
