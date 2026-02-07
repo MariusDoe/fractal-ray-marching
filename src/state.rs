@@ -1,4 +1,7 @@
-use crate::{key_state::KeyState, persistent_state::PersistentState, render_state::RenderState};
+use crate::{
+    blit_state::BlitState, key_state::KeyState, persistent_state::PersistentState,
+    render_state::RenderState,
+};
 use anyhow::{Context, Ok, Result};
 use wgpu::{
     BindGroup, Color, CommandEncoder, CommandEncoderDescriptor, LoadOp, Operations,
@@ -17,6 +20,7 @@ use winit::{
 pub struct State {
     pub persistent: PersistentState,
     render: RenderState,
+    blit: BlitState,
     key_state: KeyState,
     last_cursor_position: Option<PhysicalPosition<f64>>,
     cursor_grabbed: bool,
@@ -28,10 +32,12 @@ impl State {
     pub async fn init(event_loop: &ActiveEventLoop) -> Result<Self> {
         let persistent = PersistentState::init(event_loop).await?;
         let render = RenderState::init(&persistent)?;
+        let blit = BlitState::init(&persistent);
         let key_state = KeyState::default();
         Ok(Self {
             persistent,
             render,
+            blit,
             key_state,
             cursor_grabbed: false,
             last_cursor_position: None,
@@ -54,7 +60,7 @@ impl State {
             .device
             .create_command_encoder(&CommandEncoderDescriptor::default());
         let render_texture_view = self
-            .persistent
+            .blit
             .render_texture
             .create_view(&TextureViewDescriptor::default());
         self.do_render_pass(
@@ -75,7 +81,7 @@ impl State {
             "blit_render_pass",
             &frame_texture_view,
             &self.persistent.blit_render_pipeline,
-            &self.persistent.blit_bind_group,
+            &self.blit.blit_bind_group,
         );
         self.persistent.queue.submit(Some(encoder.finish()));
         self.persistent.window.pre_present_notify();
@@ -127,6 +133,11 @@ impl State {
         }
     }
 
+    fn update_render_texture_size(&mut self, delta: i32) {
+        self.persistent.update_render_texture_size(delta);
+        self.blit = BlitState::init(&self.persistent);
+    }
+
     pub fn handle_key(&mut self, event: KeyEvent) -> Result<()> {
         if event.state == ElementState::Pressed {
             macro_rules! handle_keys {
@@ -147,6 +158,8 @@ impl State {
                 "o" => self.persistent.camera.toggle_orbiting(),
                 "n" => self.persistent.parameters.update_scene_index(1),
                 "b" => self.persistent.parameters.update_scene_index(-1),
+                ">" => self.update_render_texture_size(1),
+                "<" => self.update_render_texture_size(-1),
             );
         }
         let PhysicalKey::Code(code) = event.physical_key else {

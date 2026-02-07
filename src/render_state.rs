@@ -1,4 +1,5 @@
 use crate::{
+    blit_state::BlitState,
     persistent_state::PersistentState,
     utils::{create_render_pipeline, handle_device_errors},
 };
@@ -17,7 +18,6 @@ impl RenderState {
             device,
             vertex_shader,
             parameters_bind_group_layout,
-            render_texture,
             ..
         } = persistent;
         let fragment_shader_source = if cfg!(debug_assertions) {
@@ -44,7 +44,7 @@ impl RenderState {
             "render_pipeline",
             vertex_shader,
             &fragment_shader,
-            render_texture.format(),
+            BlitState::RENDER_TEXTURE_FORMAT,
         );
         Ok(Self { render_pipeline })
     }

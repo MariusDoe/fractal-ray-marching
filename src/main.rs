@@ -2,6 +2,7 @@ use crate::app::App;
 use winit::event_loop::EventLoop;
 
 mod app;
+mod blit_state;
 mod camera;
 mod key_state;
 mod parameters;

@@ -11,11 +11,10 @@ use wgpu::{
     Adapter, AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
     BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType, Buffer,
     BufferBinding, BufferBindingType, BufferDescriptor, BufferUsages, Device, DeviceDescriptor,
-    Extent3d, FilterMode, Instance, InstanceDescriptor, PowerPreference, Queue, RenderPipeline,
-    RequestAdapterOptions, SamplerBindingType, SamplerDescriptor, ShaderModule,
-    ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface, Texture, TextureDescriptor,
-    TextureDimension, TextureFormat, TextureSampleType, TextureUsages, TextureViewDimension,
-    wgt::TextureViewDescriptor,
+    FilterMode, Instance, InstanceDescriptor, PowerPreference, Queue, RenderPipeline,
+    RequestAdapterOptions, Sampler, SamplerBindingType, SamplerDescriptor, ShaderModule,
+    ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface, TextureSampleType,
+    TextureViewDimension,
 };
 use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop, window::Window};
 
@@ -26,8 +25,8 @@ pub struct PersistentState {
     pub adapter: Adapter,
     pub device: Device,
     pub queue: Queue,
-    pub render_texture: Texture,
-    pub blit_bind_group: BindGroup,
+    pub render_texture_sampler: Sampler,
+    pub blit_bind_group_layout: BindGroupLayout,
     pub blit_render_pipeline: RenderPipeline,
     pub vertex_shader: ShaderModule,
     pub parameters: Parameters,
@@ -35,6 +34,7 @@ pub struct PersistentState {
     pub parameters_bind_group_layout: BindGroupLayout,
     pub parameters_bind_group: BindGroup,
     pub camera: Camera,
+    render_texture_factor: u32,
     start_time: Instant,
     last_frame_time: Instant,
     last_fps_log: Instant,
@@ -64,22 +64,6 @@ impl PersistentState {
             .request_device(&DeviceDescriptor::default())
             .await
             .context("failed to request device")?;
-        let render_texture_format = TextureFormat::Rgba8UnormSrgb;
-        let render_texture = device.create_texture(&TextureDescriptor {
-            label: Some("render_texture"),
-            dimension: TextureDimension::D2,
-            size: Extent3d {
-                width: 1920,
-                height: 1080,
-                ..Default::default()
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            format: render_texture_format,
-            usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
-        let render_texture_view = render_texture.create_view(&TextureViewDescriptor::default());
         let render_texture_sampler = device.create_sampler(&SamplerDescriptor {
             label: Some("render_texture_sampler"),
             address_mode_u: AddressMode::ClampToEdge,
@@ -116,20 +100,6 @@ impl PersistentState {
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler(SamplerBindingType::Filtering),
                     count: None,
-                },
-            ],
-        });
-        let blit_bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: Some("blit_bind_group"),
-            layout: &blit_bind_group_layout,
-            entries: &[
-                BindGroupEntry {
-                    binding: 0,
-                    resource: BindingResource::TextureView(&render_texture_view),
-                },
-                BindGroupEntry {
-                    binding: 1,
-                    resource: BindingResource::Sampler(&render_texture_sampler),
                 },
             ],
         });
@@ -185,8 +155,9 @@ impl PersistentState {
             adapter,
             device,
             queue,
-            render_texture,
-            blit_bind_group,
+            render_texture_factor: 12, // 1920x1080
+            render_texture_sampler,
+            blit_bind_group_layout,
             blit_render_pipeline,
             vertex_shader,
             parameters: Parameters::default(),
@@ -223,6 +194,18 @@ impl PersistentState {
             0,
             bytemuck::cast_slice(&[self.parameters]),
         );
+    }
+
+    pub fn render_texture_size(&self) -> (u32, u32) {
+        (
+            160 * self.render_texture_factor,
+            90 * self.render_texture_factor,
+        )
+    }
+
+    pub fn update_render_texture_size(&mut self, delta: i32) {
+        self.render_texture_factor =
+            std::cmp::max(1, self.render_texture_factor.saturating_add_signed(delta));
     }
 
     const FPS_LOG_INTERVAL: Duration = Duration::from_secs(1);
