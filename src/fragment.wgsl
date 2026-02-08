@@ -113,13 +113,13 @@ fn cross_inside(position: Position, size: Distance) -> Distance {
     return min_comp3(vec3(x, y, z)) - size;
 }
 
-fn menger_sponge(position: Position) -> Object {
+fn menger_sponge(position: Position, cross_size: Scalar, scale_factor: Scalar) -> Object {
     let size = 0.5;
     var distance = box(position, vec3(size));
     var scale = 0.5 / size;
     for (var i = 0u; i < parameters.num_iterations; i++) {
-        distance = max(distance, -cross_inside(repeat(position * scale), 1.0 / 6.0) / scale);
-        scale *= 3.0;
+        distance = max(distance, -cross_inside(repeat(position * scale), cross_size) / scale);
+        scale *= scale_factor;
     }
     return object(distance, colorize(position));
 }
@@ -155,12 +155,51 @@ fn koch3D(position: Position) -> Object {
 fn scene(position: Position) -> Object {
     switch (parameters.scene_index) {
         case 0, default: {
-            return menger_sponge(position);
+            return menger_sponge(position, 1.0 / 6.0, 3.0);
         }
         case 1: {
-            return sierpinski_tetrahedron(position);
+            return menger_sponge(position, 1.0 / 4.0, 3.0);
         }
         case 2: {
+            return menger_sponge(position, 1.0 / 3.0, 3.0);
+        }
+        case 3: {
+            return menger_sponge(position, 1.0 / animate_between(2, 8), 3.0);
+        }
+        case 4: {
+            return menger_sponge(position, 1.0 / 6.0, 2.0);
+        }
+        case 5: {
+            return menger_sponge(position, 1.0 / 4.0, 2.0);
+        }
+        case 6: {
+            return menger_sponge(position, 1.0 / 8.0, 2.0);
+        }
+        case 7: {
+            return menger_sponge(position, 1.0 / animate_between(3, 10), 2.0);
+        }
+        case 8: {
+            return menger_sponge(position, 1.0 / 4.0, 4.0);
+        }
+        case 9: {
+            return menger_sponge(position, 1.0 / 5.0, 5.0);
+        }
+        case 10: {
+            return menger_sponge(position, 1.0 / 4.0, 6.0);
+        }
+        case 11: {
+            return menger_sponge(position, 1.0 / 3.0, animate_between(3, 5));
+        }
+        case 12: {
+            return menger_sponge(position, 1.0 / 4.0, animate_between(2, 4));
+        }
+        case 13: {
+            return menger_sponge(position, 1.0 / 6.0, animate_between(1.2, 3));
+        }
+        case 14: {
+            return sierpinski_tetrahedron(position);
+        }
+        case 15: {
             return koch3D(position);
         }
     }
