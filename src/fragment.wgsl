@@ -153,6 +153,38 @@ fn koch3D(position: Position) -> Object {
     return object(tetrahedron(p, top, left, right, back) / scale_factor, colorize(position));
 }
 
+fn mandelbulb(position: Position, power: Scalar, bailout: Scalar) -> Object {
+    // adapted from http://blog.hvidtfeldts.net/index.php/2011/09/distance-estimated-3d-fractals-v-the-mandelbulb-different-de-approximations/
+    var z = position;
+    var dr = 1.0;
+    var r = 0.0;
+    for (var i = 0u; i < parameters.num_iterations; i++) {
+        r = length(z);
+        if (r > bailout) {
+            break;
+        }
+
+        // convert to polar coordinates
+        var theta = acos(z.z / r);
+        var phi = atan2(z.y, z.x);
+        dr = pow(r, power - 1.0) * power * dr + 1.0;
+
+        // scale and rotate the point
+        let zr = pow(r, power);
+        theta = theta * power;
+        phi = phi * power;
+
+        // convert back to cartesian coordinates
+        z = zr * vec3(sin(theta) * cos(phi), sin(phi) * sin(theta), cos(theta));
+        z += position;
+    }
+    return object(0.5 * log(r) * r / dr, colorize(position));
+}
+
+fn animate_between(a: Scalar, b: Scalar) -> Scalar {
+    return a + (b - a) * (0.5 + 0.5 * sin(parameters.time / 5));
+}
+
 fn scene(position: Position) -> Object {
     switch (parameters.scene_index) {
         case 0, default: {
@@ -202,6 +234,9 @@ fn scene(position: Position) -> Object {
         }
         case 15: {
             return koch3D(position);
+        }
+        case 16: {
+            return mandelbulb(position, animate_between(1, 9), 4.0);
         }
     }
 }
