@@ -139,7 +139,8 @@ fn koch3D(position: Position) -> Object {
     let left = Position(-1.5, 0, -offset);
     let right = Position(1.5, 0, -offset);
     let back = Position(0, 0, sqrt3);
-    var scale_factor = 1.0;
+    var scale_factor = 2.0;
+    p *= scale_factor;
     for (var i = 0u; i < parameters.num_iterations; i++) {
         let factor = 3.0 / 2.0;
         scale_factor *= factor;
