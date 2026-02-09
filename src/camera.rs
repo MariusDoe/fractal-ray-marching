@@ -1,17 +1,25 @@
 use crate::key_state::KeyState;
 use cgmath::{Angle, InnerSpace, Matrix3, Matrix4, Rad, Vector2, Vector3, Zero, num_traits::clamp};
-use std::{
-    f32::consts::{FRAC_PI_2, TAU},
-    time::Duration,
-};
+use std::{f32::consts::FRAC_PI_2, time::Duration};
 
 #[derive(Debug)]
 pub struct Camera {
     movement_per_second: f32,
-    orbiting: bool,
+    orbit_angle_per_second: Rad<f32>,
+    lock_yaw_mode: LockYawMode,
+    lock_pitch: bool,
     position: Vector3<f32>,
     pitch: Rad<f32>,
     yaw: Rad<f32>,
+}
+
+#[derive(Debug)]
+enum LockYawMode {
+    None,
+    Inwards,
+    Right,
+    Outwards,
+    Left,
 }
 
 impl Camera {
@@ -53,16 +61,39 @@ impl Camera {
         self.movement_per_second *= (delta * 0.05).exp();
     }
 
-    pub fn toggle_orbiting(&mut self) {
-        self.orbiting = !self.orbiting;
+    pub fn update_orbit_speed(&mut self, delta: f32) {
+        let factor = if self.orbit_angle_per_second.is_zero() {
+            0.025
+        } else {
+            self.orbit_angle_per_second.0.abs().clamp(0.00001, 0.1)
+        };
+        self.orbit_angle_per_second += Rad(delta * factor);
+    }
+
+    pub fn reset_orbit_speed(&mut self) {
+        self.orbit_angle_per_second = Rad::zero();
+    }
+
+    pub fn toggle_lock_pitch(&mut self) {
+        self.lock_pitch = !self.lock_pitch;
+    }
+
+    pub fn cycle_lock_yaw_mode(&mut self) {
+        use LockYawMode::*;
+        self.lock_yaw_mode = match self.lock_yaw_mode {
+            None => Inwards,
+            Inwards => Right,
+            Right => Outwards,
+            Outwards => Left,
+            Left => None,
+        };
     }
 
     pub fn update(&mut self, keys: KeyState, delta_time: Duration) {
         let seconds = delta_time.as_secs_f32();
         self.do_movement(keys, seconds);
-        if self.orbiting {
-            self.do_orbit(seconds);
-        }
+        self.do_orbit(seconds);
+        self.do_lock_rotation();
     }
 
     fn do_movement(&mut self, keys: KeyState, seconds: f32) {
@@ -78,11 +109,32 @@ impl Camera {
     }
 
     fn do_orbit(&mut self, seconds: f32) {
+        let rotation = Matrix3::from_angle_y(self.orbit_angle_per_second * seconds);
+        self.position = rotation * self.position;
+    }
+
+    fn do_lock_rotation(&mut self) {
+        self.do_lock_yaw();
+        self.do_lock_pitch();
+    }
+
+    fn do_lock_yaw(&mut self) {
+        let offset = match self.lock_yaw_mode {
+            LockYawMode::None => return,
+            LockYawMode::Inwards => -Rad::full_turn() / 2.0,
+            LockYawMode::Right => -Rad::full_turn() / 4.0,
+            LockYawMode::Outwards => Rad::zero(),
+            LockYawMode::Left => Rad::full_turn() / 4.0,
+        };
+        self.yaw = Rad::atan2(self.position.x, self.position.z) + offset;
+    }
+
+    fn do_lock_pitch(&mut self) {
+        if !self.lock_pitch {
+            return;
+        }
         let xz = Vector2::new(self.position.x, self.position.z);
         let radius = xz.magnitude();
-        let rotation = Matrix3::from_angle_y(Rad(self.movement_per_second * seconds / TAU));
-        self.position = rotation * self.position;
-        self.yaw = Rad::atan2(-self.position.x, -self.position.z);
         self.pitch = Rad::atan2(self.position.y, radius);
     }
 
@@ -117,7 +169,9 @@ impl Default for Camera {
     fn default() -> Self {
         Self {
             movement_per_second: 1.0,
-            orbiting: false,
+            orbit_angle_per_second: Rad::zero(),
+            lock_pitch: false,
+            lock_yaw_mode: LockYawMode::None,
             position: Vector3::new(0.0, 0.0, -1.0),
             pitch: Rad::zero(),
             yaw: Rad::zero(),

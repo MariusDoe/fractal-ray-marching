@@ -13,6 +13,7 @@ bitflags! {
         const PitchDown = 1 << 7;
         const YawRight = 1 << 8;
         const YawLeft = 1 << 9;
+        const Shift = 1 << 10;
     }
 }
 
