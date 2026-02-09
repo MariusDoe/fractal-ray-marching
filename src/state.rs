@@ -12,7 +12,7 @@ use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, KeyEvent, MouseButton, MouseScrollDelta},
     event_loop::ActiveEventLoop,
-    keyboard::{KeyCode, NamedKey, PhysicalKey},
+    keyboard::NamedKey,
     window::CursorGrabMode,
 };
 
@@ -118,10 +118,6 @@ impl State {
         render_pass.draw(0..4, 0..1);
     }
 
-    fn handle_movement(&mut self, key: KeyState, pressed: bool) {
-        self.key_state.set(key, pressed);
-    }
-
     fn reload(&mut self) -> Result<()> {
         self.render = RenderState::init(&self.persistent).context("failed to reload")?;
         Ok(())
@@ -138,55 +134,64 @@ impl State {
         self.blit = BlitState::init(&self.persistent);
     }
 
-    pub fn handle_key(&mut self, event: KeyEvent) -> Result<()> {
-        if event.logical_key == NamedKey::Shift {
-            self.key_state
-                .set(KeyState::Shift, event.state.is_pressed());
-            return Ok(());
-        }
-        if event.state == ElementState::Pressed {
-            macro_rules! handle_keys {
-                ($($key:expr => $body:stmt),* $(,)?) => {
-                    $(
-                        if event.logical_key == $key {
-                            $body
-                            return Ok(());
-                        }
-                    )*
-                };
-            }
-            handle_keys!(
-                NamedKey::Escape => self.ungrab_cursor()?,
-                "r" => self.try_reload(),
-                "+" => self.persistent.parameters.update_num_iterations(1),
-                "-" => self.persistent.parameters.update_num_iterations(-1),
-                "o" => self.persistent.camera.reset_orbit_speed(),
-                "p" => self.persistent.camera.toggle_lock_pitch(),
-                "l" => self.persistent.camera.cycle_lock_yaw_mode(),
-                "n" => self.persistent.parameters.update_scene_index(1),
-                "b" => self.persistent.parameters.update_scene_index(-1),
-                ">" => self.update_render_texture_size(1),
-                "<" => self.update_render_texture_size(-1),
-            );
-        }
-        let PhysicalKey::Code(code) = event.physical_key else {
-            return Ok(());
-        };
-        let key = match code {
-            KeyCode::KeyW => KeyState::MoveForward,
-            KeyCode::KeyS => KeyState::MoveBackward,
-            KeyCode::KeyA => KeyState::MoveLeft,
-            KeyCode::KeyD => KeyState::MoveRight,
-            KeyCode::KeyQ => KeyState::MoveDown,
-            KeyCode::KeyE => KeyState::MoveUp,
-            KeyCode::ArrowDown => KeyState::PitchDown,
-            KeyCode::ArrowUp => KeyState::PitchUp,
-            KeyCode::ArrowRight => KeyState::YawRight,
-            KeyCode::ArrowLeft => KeyState::YawLeft,
-            _ => return Ok(()),
-        };
-        self.handle_movement(key, event.state.is_pressed());
+    pub fn handle_key(&mut self, event: &KeyEvent) -> Result<()> {
+        self.handle_key_state_keys(event);
+        self.handle_single_press_keys(event)?;
         Ok(())
+    }
+
+    fn handle_single_press_keys(&mut self, event: &KeyEvent) -> Result<()> {
+        if event.state != ElementState::Pressed {
+            return Ok(());
+        }
+        macro_rules! handle_keys {
+            ($($key:expr => $body:stmt),* $(,)?) => {
+                $(
+                    if event.logical_key == $key {
+                        $body
+                        return Ok(());
+                    }
+                )*
+            };
+        }
+        handle_keys!(
+            NamedKey::Escape => self.ungrab_cursor()?,
+            "r" => self.try_reload(),
+            "+" => self.persistent.parameters.update_num_iterations(1),
+            "-" => self.persistent.parameters.update_num_iterations(-1),
+            "o" => self.persistent.camera.reset_orbit_speed(),
+            "p" => self.persistent.camera.toggle_lock_pitch(),
+            "l" => self.persistent.camera.cycle_lock_yaw_mode(),
+            "n" => self.persistent.parameters.update_scene_index(1),
+            "b" => self.persistent.parameters.update_scene_index(-1),
+            ">" => self.update_render_texture_size(1),
+            "<" => self.update_render_texture_size(-1),
+        );
+        Ok(())
+    }
+
+    fn handle_key_state_keys(&mut self, event: &KeyEvent) {
+        macro_rules! match_key {
+            ($($key:expr => $key_state:expr,)* else => $default:expr $(,)?) => {
+                $(if event.logical_key == $key { $key_state } else )*
+                { $default }
+            };
+        }
+        let key_state = match_key! {
+            "w" => KeyState::MoveForward,
+            "s" => KeyState::MoveBackward,
+            "a" => KeyState::MoveLeft,
+            "d" => KeyState::MoveRight,
+            "q" => KeyState::MoveDown,
+            "e" => KeyState::MoveUp,
+            NamedKey::ArrowDown => KeyState::PitchDown,
+            NamedKey::ArrowUp => KeyState::PitchUp,
+            NamedKey::ArrowRight => KeyState::YawRight,
+            NamedKey::ArrowLeft => KeyState::YawLeft,
+            NamedKey::Shift => KeyState::Shift,
+            else => return,
+        };
+        self.key_state.set(key_state, event.state.is_pressed());
     }
 
     pub fn handle_mouse(&mut self, button: MouseButton, state: ElementState) -> Result<()> {

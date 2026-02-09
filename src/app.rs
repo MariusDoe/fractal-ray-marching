@@ -38,7 +38,7 @@ impl App {
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 self.state_mut("got keyboard input before initialization")
-                    .handle_key(event)
+                    .handle_key(&event)
                     .context("failed to handle keyboard input")?;
             }
             WindowEvent::CursorMoved { position, .. } => {
