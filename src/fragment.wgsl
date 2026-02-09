@@ -1,3 +1,81 @@
+// raymarching
+const MAX_TOTAL_DISTANCE = Distance(1.0e3);
+const MIN_DISTANCE = Distance(5.0e-7);
+const MAX_ITERATIONS = u32(5.0e3);
+const FOV_DEGREES = 90;
+
+// colors / shading
+const BACKGROUND_COLOR = Color(0, 0, 0);
+const SUN_DIRECTION = Direction(-1, -0.5, 1);
+const SUN_COLOR = Color(1, 1, 1);
+const SHADOW_FACTOR = 0.7;
+const SHADOW_SHARPNESS = 32;
+const SPECULAR_SHARPNESS = 16;
+const AMBIENT_OCCLUSION_FACTOR = 0.2;
+const AMBIENT_OCCLUSION_SHARPNESS = 60;
+
+fn scene(position: Position) -> Object {
+    switch (parameters.scene_index) {
+        case 0, default: {
+            return menger_sponge(position, 1.0 / 6.0, 3.0);
+        }
+        case 1: {
+            return menger_sponge(position, 1.0 / 5.0, 3.0);
+        }
+        case 2: {
+            return menger_sponge(position, 1.0 / 4.0, 3.0);
+        }
+        case 3: {
+            return menger_sponge(position, 1.0 / 3.0, 3.0);
+        }
+        case 4: {
+            return menger_sponge(position, 1.0 / animate_between(2, 8), 3.0);
+        }
+        case 5: {
+            return menger_sponge(position, 1.0 / 6.0, 2.0);
+        }
+        case 6: {
+            return menger_sponge(position, 1.0 / 4.0, 2.0);
+        }
+        case 7: {
+            return menger_sponge(position, 1.0 / 8.0, 2.0);
+        }
+        case 8: {
+            return menger_sponge(position, 1.0 / animate_between(3, 10), 2.0);
+        }
+        case 9: {
+            return menger_sponge(position, 1.0 / 4.0, 4.0);
+        }
+        case 10: {
+            return menger_sponge(position, 1.0 / 5.0, 5.0);
+        }
+        case 11: {
+            return menger_sponge(position, 1.0 / 4.0, 6.0);
+        }
+        case 12: {
+            return menger_sponge(position, 1.0 / 3.0, animate_between(3, 5));
+        }
+        case 13: {
+            return menger_sponge(position, 1.0 / 4.0, animate_between(2, 4));
+        }
+        case 14: {
+            return menger_sponge(position, 1.0 / 6.0, animate_between(1.2, 3));
+        }
+        case 15: {
+            return sierpinski_tetrahedron(position);
+        }
+        case 16: {
+            return koch3D(position, sqrt(3));
+        }
+        case 17: {
+            return koch3D(position, animate_between(sqrt(3), 4));
+        }
+        case 18: {
+            return mandelbulb(position, animate_between(1, 9), 4.0);
+        }
+    }
+}
+
 alias Scalar = f32;
 alias Distance = Scalar;
 alias Vector = vec3<Scalar>;
@@ -5,6 +83,10 @@ alias Homogeneous = vec4<Scalar>;
 alias Position = Vector;
 alias Direction = Vector;
 alias Color = Vector;
+
+const PI = 3.141592653589793238;
+const TWO_PI = 2 * PI;
+const INFINITY = pow(10, 20);
 
 struct Object {
     distance: Distance,
@@ -180,86 +262,6 @@ fn mandelbulb(position: Position, power: Scalar, bailout: Scalar) -> Object {
 fn animate_between(a: Scalar, b: Scalar) -> Scalar {
     return a + (b - a) * (0.5 + 0.5 * sin(parameters.time / 5));
 }
-
-fn scene(position: Position) -> Object {
-    switch (parameters.scene_index) {
-        case 0, default: {
-            return menger_sponge(position, 1.0 / 6.0, 3.0);
-        }
-        case 1: {
-            return menger_sponge(position, 1.0 / 5.0, 3.0);
-        }
-        case 2: {
-            return menger_sponge(position, 1.0 / 4.0, 3.0);
-        }
-        case 3: {
-            return menger_sponge(position, 1.0 / 3.0, 3.0);
-        }
-        case 4: {
-            return menger_sponge(position, 1.0 / animate_between(2, 8), 3.0);
-        }
-        case 5: {
-            return menger_sponge(position, 1.0 / 6.0, 2.0);
-        }
-        case 6: {
-            return menger_sponge(position, 1.0 / 4.0, 2.0);
-        }
-        case 7: {
-            return menger_sponge(position, 1.0 / 8.0, 2.0);
-        }
-        case 8: {
-            return menger_sponge(position, 1.0 / animate_between(3, 10), 2.0);
-        }
-        case 9: {
-            return menger_sponge(position, 1.0 / 4.0, 4.0);
-        }
-        case 10: {
-            return menger_sponge(position, 1.0 / 5.0, 5.0);
-        }
-        case 11: {
-            return menger_sponge(position, 1.0 / 4.0, 6.0);
-        }
-        case 12: {
-            return menger_sponge(position, 1.0 / 3.0, animate_between(3, 5));
-        }
-        case 13: {
-            return menger_sponge(position, 1.0 / 4.0, animate_between(2, 4));
-        }
-        case 14: {
-            return menger_sponge(position, 1.0 / 6.0, animate_between(1.2, 3));
-        }
-        case 15: {
-            return sierpinski_tetrahedron(position);
-        }
-        case 16: {
-            return koch3D(position, sqrt(3));
-        }
-        case 17: {
-            return koch3D(position, animate_between(sqrt(3), 4));
-        }
-        case 18: {
-            return mandelbulb(position, animate_between(1, 9), 4.0);
-        }
-    }
-}
-
-const MAX_TOTAL_DISTANCE = Distance(1.0e3);
-const MIN_DISTANCE = Distance(5.0e-7);
-const MAX_ITERATIONS = u32(5.0e3);
-
-const BACKGROUND_COLOR = Color(0);
-const SUN_DIRECTION = Direction(-1, -0.5, 1);
-const SUN_COLOR = Color(1);
-const SHADOW_FACTOR = 0.7;
-const SHADOW_SHARPNESS = 32;
-const SPECULAR_SHARPNESS = 16;
-const AMBIENT_OCCLUSION_FACTOR = 0.2;
-const AMBIENT_OCCLUSION_SHARPNESS = 60;
-const FOV_DEGREES = 90;
-const PI = 3.141592653589793238;
-const TWO_PI = 2 * PI;
-
-const INFINITY = pow(10, 20);
 
 struct Parameters {
     camera_matrix: mat4x4<Scalar>,
