@@ -78,14 +78,24 @@ impl Camera {
         self.lock_pitch = !self.lock_pitch;
     }
 
-    pub fn cycle_lock_yaw_mode(&mut self) {
+    pub fn cycle_lock_yaw_mode(&mut self, backwards: bool) {
         use LockYawMode::*;
-        self.lock_yaw_mode = match self.lock_yaw_mode {
-            None => Inwards,
-            Inwards => Right,
-            Right => Outwards,
-            Outwards => Left,
-            Left => None,
+        self.lock_yaw_mode = if backwards {
+            match self.lock_yaw_mode {
+                None => Left,
+                Inwards => None,
+                Right => Inwards,
+                Outwards => Right,
+                Left => Outwards,
+            }
+        } else {
+            match self.lock_yaw_mode {
+                None => Inwards,
+                Inwards => Right,
+                Right => Outwards,
+                Outwards => Left,
+                Left => None,
+            }
         };
     }
 

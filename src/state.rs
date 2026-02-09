@@ -161,7 +161,8 @@ impl State {
             "-" => self.persistent.parameters.update_num_iterations(-1),
             "o" => self.persistent.camera.reset_orbit_speed(),
             "p" => self.persistent.camera.toggle_lock_pitch(),
-            "l" => self.persistent.camera.cycle_lock_yaw_mode(),
+            "l" => self.persistent.camera.cycle_lock_yaw_mode(false),
+            "L" => self.persistent.camera.cycle_lock_yaw_mode(true),
             "n" => self.persistent.parameters.update_scene_index(1),
             "b" => self.persistent.parameters.update_scene_index(-1),
             ">" => self.update_render_texture_size(1),
@@ -201,12 +202,16 @@ impl State {
         Ok(())
     }
 
+    fn is_shift_pressed(&self) -> bool {
+        self.key_state.contains(KeyState::Shift)
+    }
+
     pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) -> Result<()> {
         let (mut x, mut y) = match delta {
             MouseScrollDelta::LineDelta(x, y) => (x, y),
             MouseScrollDelta::PixelDelta(PhysicalPosition { x, y }) => (x as f32, y as f32),
         };
-        if self.key_state.contains(KeyState::Shift) {
+        if self.is_shift_pressed() {
             x += y;
             y = 0.0;
         }
