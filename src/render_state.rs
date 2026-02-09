@@ -32,7 +32,7 @@ impl RenderState {
         };
         let fragment_shader = handle_device_errors(device, ErrorFilter::Validation, || {
             device.create_shader_module(ShaderModuleDescriptor {
-                label: Some("fragment shader"),
+                label: Some("fragment_shader"),
                 source: ShaderSource::Wgsl(fragment_shader_source),
             })
         })
