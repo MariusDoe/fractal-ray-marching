@@ -26,8 +26,8 @@ impl BlitState {
                 label: Some("render_texture"),
                 dimension: TextureDimension::D2,
                 size: Extent3d {
-                    width: width,
-                    height: height,
+                    width,
+                    height,
                     ..Default::default()
                 },
                 mip_level_count: 1,
@@ -40,7 +40,7 @@ impl BlitState {
         let render_texture_view = render_texture.create_view(&TextureViewDescriptor::default());
         let blit_bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: Some("blit_bind_group"),
-            layout: &blit_bind_group_layout,
+            layout: blit_bind_group_layout,
             entries: &[
                 BindGroupEntry {
                     binding: 0,
@@ -48,7 +48,7 @@ impl BlitState {
                 },
                 BindGroupEntry {
                     binding: 1,
-                    resource: BindingResource::Sampler(&render_texture_sampler),
+                    resource: BindingResource::Sampler(render_texture_sampler),
                 },
             ],
         });
