@@ -187,54 +187,57 @@ fn scene(position: Position) -> Object {
             return menger_sponge(position, 1.0 / 6.0, 3.0);
         }
         case 1: {
-            return menger_sponge(position, 1.0 / 4.0, 3.0);
+            return menger_sponge(position, 1.0 / 5.0, 3.0);
         }
         case 2: {
-            return menger_sponge(position, 1.0 / 3.0, 3.0);
+            return menger_sponge(position, 1.0 / 4.0, 3.0);
         }
         case 3: {
-            return menger_sponge(position, 1.0 / animate_between(2, 8), 3.0);
+            return menger_sponge(position, 1.0 / 3.0, 3.0);
         }
         case 4: {
-            return menger_sponge(position, 1.0 / 6.0, 2.0);
+            return menger_sponge(position, 1.0 / animate_between(2, 8), 3.0);
         }
         case 5: {
-            return menger_sponge(position, 1.0 / 4.0, 2.0);
+            return menger_sponge(position, 1.0 / 6.0, 2.0);
         }
         case 6: {
-            return menger_sponge(position, 1.0 / 8.0, 2.0);
+            return menger_sponge(position, 1.0 / 4.0, 2.0);
         }
         case 7: {
-            return menger_sponge(position, 1.0 / animate_between(3, 10), 2.0);
+            return menger_sponge(position, 1.0 / 8.0, 2.0);
         }
         case 8: {
-            return menger_sponge(position, 1.0 / 4.0, 4.0);
+            return menger_sponge(position, 1.0 / animate_between(3, 10), 2.0);
         }
         case 9: {
-            return menger_sponge(position, 1.0 / 5.0, 5.0);
+            return menger_sponge(position, 1.0 / 4.0, 4.0);
         }
         case 10: {
-            return menger_sponge(position, 1.0 / 4.0, 6.0);
+            return menger_sponge(position, 1.0 / 5.0, 5.0);
         }
         case 11: {
-            return menger_sponge(position, 1.0 / 3.0, animate_between(3, 5));
+            return menger_sponge(position, 1.0 / 4.0, 6.0);
         }
         case 12: {
-            return menger_sponge(position, 1.0 / 4.0, animate_between(2, 4));
+            return menger_sponge(position, 1.0 / 3.0, animate_between(3, 5));
         }
         case 13: {
-            return menger_sponge(position, 1.0 / 6.0, animate_between(1.2, 3));
+            return menger_sponge(position, 1.0 / 4.0, animate_between(2, 4));
         }
         case 14: {
-            return sierpinski_tetrahedron(position);
+            return menger_sponge(position, 1.0 / 6.0, animate_between(1.2, 3));
         }
         case 15: {
-            return koch3D(position, sqrt(3));
+            return sierpinski_tetrahedron(position);
         }
         case 16: {
-            return koch3D(position, animate_between(sqrt(3), 4));
+            return koch3D(position, sqrt(3));
         }
         case 17: {
+            return koch3D(position, animate_between(sqrt(3), 4));
+        }
+        case 18: {
             return mandelbulb(position, animate_between(1, 9), 4.0);
         }
     }
