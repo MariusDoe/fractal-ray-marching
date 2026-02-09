@@ -12,7 +12,7 @@ const SHADOW_FACTOR = 0.7;
 const SHADOW_SHARPNESS = 32;
 const SPECULAR_SHARPNESS = 16;
 const AMBIENT_OCCLUSION_FACTOR = 0.2;
-const AMBIENT_OCCLUSION_SHARPNESS = 60;
+const AMBIENT_OCCLUSION_SHARPNESS = 100;
 
 fn scene(position: Position) -> Object {
     switch (parameters.scene_index) {
