@@ -1,7 +1,7 @@
 use crate::camera::Camera;
 use bytemuck::{Pod, Zeroable};
 use cgmath::Matrix;
-use std::{cmp::min, time::Duration};
+use std::cmp::min;
 
 #[derive(Debug, Default, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
@@ -24,8 +24,8 @@ impl Parameters {
         self.camera_matrix = *camera.to_matrix().transpose().as_ref();
     }
 
-    pub fn update_time(&mut self, time: Duration) {
-        self.time = time.as_secs_f32();
+    pub fn update_time(&mut self, delta: f32) {
+        self.time += delta;
     }
 
     pub fn update_num_iterations(&mut self, delta: i32) {

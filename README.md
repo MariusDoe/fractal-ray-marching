@@ -36,6 +36,8 @@ These are the key and mouse bindings:
 | `L`/shift + `L`                             | cycle forwards/backwards through yaw *l*ocking modes (horizontal angle, see below) |
 | `+`/`-`                                     | increase/decrease number of fractal iterations                                     |
 | `N`/`B`                                     | cycle through fractals (*n*ext / *b*ack)                                           |
+| ctrl + scroll up/down                       | speed up/slow down time (in animations)                                            |
+| `T`                                         | stop *t*ime                                                                        |
 | `>`/`<`                                     | increase/decrease render resolution                                                |
 | `R`                                         | reload fragment shader                                                             |
 

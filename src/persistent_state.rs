@@ -1,5 +1,8 @@
 use crate::{
-    camera::Camera, key_state::KeyState, parameters::Parameters, utils::create_render_pipeline,
+    camera::Camera,
+    key_state::KeyState,
+    parameters::Parameters,
+    utils::{create_render_pipeline, limited_quadratric_delta},
 };
 use anyhow::{Context, Result};
 use std::{
@@ -35,7 +38,7 @@ pub struct PersistentState {
     pub parameters_bind_group: BindGroup,
     pub camera: Camera,
     render_texture_factor: u32,
-    start_time: Instant,
+    time_factor: f32,
     last_frame_time: Instant,
     last_fps_log: Instant,
     frames_since_last_fps_log: u32,
@@ -165,7 +168,7 @@ impl PersistentState {
             parameters_bind_group_layout,
             parameters_bind_group,
             camera: Camera::default(),
-            start_time,
+            time_factor: 1.0,
             last_frame_time: start_time,
             last_fps_log: start_time,
             frames_since_last_fps_log: 0,
@@ -208,12 +211,22 @@ impl PersistentState {
             std::cmp::max(1, self.render_texture_factor.saturating_add_signed(delta));
     }
 
+    pub fn stop_time(&mut self) {
+        self.time_factor = 0.0;
+    }
+
+    pub fn update_time_factor(&mut self, delta: f32) {
+        self.time_factor +=
+            limited_quadratric_delta(self.time_factor, delta, 0.025, 0.01, 1.0, 0.5);
+    }
+
     const FPS_LOG_INTERVAL: Duration = Duration::from_secs(1);
 
     fn update_time(&mut self) -> Duration {
         let now = Instant::now();
         let delta_time = now - self.last_frame_time;
-        self.parameters.update_time(now - self.start_time);
+        self.parameters
+            .update_time(self.time_factor * delta_time.as_secs_f32());
         self.last_frame_time = now;
         self.frames_since_last_fps_log += 1;
         let time_since_last_fps_log = now - self.last_fps_log;

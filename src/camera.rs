@@ -1,4 +1,4 @@
-use crate::key_state::KeyState;
+use crate::{key_state::KeyState, utils::limited_quadratric_delta};
 use cgmath::{Angle, InnerSpace, Matrix3, Matrix4, Rad, Vector2, Vector3, Zero, num_traits::clamp};
 use std::{f32::consts::FRAC_PI_2, time::Duration};
 
@@ -62,12 +62,14 @@ impl Camera {
     }
 
     pub fn update_orbit_speed(&mut self, delta: f32) {
-        let factor = if self.orbit_angle_per_second.is_zero() {
-            0.025
-        } else {
-            self.orbit_angle_per_second.0.abs().clamp(0.0001, 0.1)
-        };
-        self.orbit_angle_per_second += Rad(0.2 * delta * factor);
+        self.orbit_angle_per_second += Rad(limited_quadratric_delta(
+            self.orbit_angle_per_second.0,
+            delta,
+            0.025,
+            0.0001,
+            0.1,
+            0.2,
+        ));
     }
 
     pub fn reset_orbit_speed(&mut self) {

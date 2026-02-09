@@ -165,6 +165,7 @@ impl State {
             "L" => self.persistent.camera.cycle_lock_yaw_mode(true),
             "n" => self.persistent.parameters.update_scene_index(1),
             "b" => self.persistent.parameters.update_scene_index(-1),
+            "t" => self.persistent.stop_time(),
             ">" => self.update_render_texture_size(1),
             "<" => self.update_render_texture_size(-1),
         );
@@ -190,6 +191,7 @@ impl State {
             NamedKey::ArrowRight => KeyState::YawRight,
             NamedKey::ArrowLeft => KeyState::YawLeft,
             NamedKey::Shift => KeyState::Shift,
+            NamedKey::Control => KeyState::Control,
             else => return,
         };
         self.key_state.set(key_state, event.state.is_pressed());
@@ -206,6 +208,10 @@ impl State {
         self.key_state.contains(KeyState::Shift)
     }
 
+    fn is_control_pressed(&self) -> bool {
+        self.key_state.contains(KeyState::Control)
+    }
+
     pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) -> Result<()> {
         const LINE_FACTOR: f32 = 0.5;
         let (mut x, mut y) = match delta {
@@ -216,8 +222,12 @@ impl State {
             x += y;
             y = 0.0;
         }
-        self.persistent.camera.update_orbit_speed(x);
-        self.persistent.camera.update_speed(y);
+        if self.is_control_pressed() {
+            self.persistent.update_time_factor(y);
+        } else {
+            self.persistent.camera.update_orbit_speed(x);
+            self.persistent.camera.update_speed(y);
+        }
         Ok(())
     }
 

@@ -14,6 +14,7 @@ bitflags! {
         const YawRight = 1 << 8;
         const YawLeft = 1 << 9;
         const Shift = 1 << 10;
+        const Control = 1 << 11;
     }
 }
 
