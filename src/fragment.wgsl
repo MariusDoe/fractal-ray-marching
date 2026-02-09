@@ -236,7 +236,7 @@ fn mandelbulb(position: Position, power: Scalar, bailout: Scalar) -> Object {
     var z = position;
     var dr = 1.0;
     var r = 0.0;
-    for (var i = 0u; i < parameters.num_iterations; i++) {
+    for (var i = 0u; i <= parameters.num_iterations; i++) {
         r = length(z);
         if (r > bailout) {
             break;
