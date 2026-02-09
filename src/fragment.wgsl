@@ -252,6 +252,9 @@ const SUN_DIRECTION = Direction(-1, -0.5, 1);
 const SUN_COLOR = Color(1);
 const SHADOW_FACTOR = 0.7;
 const SHADOW_SHARPNESS = 32;
+const SPECULAR_SHARPNESS = 16;
+const AMBIENT_OCCLUSION_FACTOR = 0.2;
+const AMBIENT_OCCLUSION_SHARPNESS = 60;
 const FOV_DEGREES = 90;
 const PI = 3.141592653589793238;
 const TWO_PI = 2 * PI;
@@ -335,10 +338,11 @@ fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec
         let to_sun = normalize(-SUN_DIRECTION);
         let to_camera = -camera_direction;
         let halfway = normalize(to_camera + to_sun);
-        let specular = pow(max(dot(halfway, object_normal), 0), 16);
+        let specular = pow(max(dot(halfway, object_normal), 0), SPECULAR_SHARPNESS);
         let sun_result = march(object_position + object_normal * 2 * MIN_DISTANCE, to_sun);
+        let ambient_occlusion = pow(1 - f32(object_result.steps) / f32(MAX_ITERATIONS), AMBIENT_OCCLUSION_SHARPNESS);
+        color *= mix(AMBIENT_OCCLUSION_FACTOR, 1, ambient_occlusion);
         let shadow = f32(sun_result.distance < 0) * SHADOW_SHARPNESS * sun_result.closeness;
-        color *= mix(0.2, 1.0, pow(1.0 - f32(object_result.steps) / f32(MAX_ITERATIONS), 60));
         color *= mix(SHADOW_FACTOR, 1, clamp(shadow, 0, 1));
         color += shadow * specular * SUN_COLOR;
     }
