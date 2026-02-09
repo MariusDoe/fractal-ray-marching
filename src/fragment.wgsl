@@ -124,13 +124,6 @@ fn menger_sponge(position: Position, cross_size: Scalar, scale_factor: Scalar) -
     return object(distance, colorize(position));
 }
 
-fn repeat_rotational(position: vec2<Scalar>, num_copies: u32) -> vec2<Scalar> {
-    let step_angle = TWO_PI / Scalar(num_copies);
-    let angle = atan2(position.y, position.x);
-    let angle_offset = step_angle * floor((angle - step_angle / 4) / step_angle);
-    return mat2x2(cos(angle_offset), -sin(angle_offset), sin(angle_offset), cos(angle_offset)) * position;
-}
-
 fn koch3D(position: Position) -> Object {
     var p = position;
     let top = Position(0, 1, 0);
@@ -139,14 +132,17 @@ fn koch3D(position: Position) -> Object {
     let left = Position(-1.5, 0, -offset);
     let right = Position(1.5, 0, -offset);
     let back = Position(0, 0, sqrt3);
+    let normal_1 = normalize(vec3(0, 1, sqrt3));
+    let normal_2 = normal_1 * vec3(1, -1, 1);
     var scale_factor = 2.0;
     p *= scale_factor;
     for (var i = 0u; i < parameters.num_iterations; i++) {
         let factor = 3.0 / 2.0;
         scale_factor *= factor;
         p *= factor;
-        let repeated = repeat_rotational(p.xz, 3);
-        p = vec3(p.y, repeated.x, repeated.y);
+        p = p.yxz;
+        p = mirror(p, Position(0), normal_1);
+        p = mirror(p, Position(0), normal_2);
         p.z -= offset;
     }
     p.y = abs(p.y);
