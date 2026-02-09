@@ -58,16 +58,16 @@ impl Camera {
     }
 
     pub fn update_speed(&mut self, delta: f32) {
-        self.movement_per_second *= (delta * 0.05).exp();
+        self.movement_per_second *= (delta * 0.1).exp();
     }
 
     pub fn update_orbit_speed(&mut self, delta: f32) {
         let factor = if self.orbit_angle_per_second.is_zero() {
             0.025
         } else {
-            self.orbit_angle_per_second.0.abs().clamp(0.00001, 0.1)
+            self.orbit_angle_per_second.0.abs().clamp(0.0001, 0.1)
         };
-        self.orbit_angle_per_second += Rad(delta * factor);
+        self.orbit_angle_per_second += Rad(0.2 * delta * factor);
     }
 
     pub fn reset_orbit_speed(&mut self) {

@@ -207,8 +207,9 @@ impl State {
     }
 
     pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) -> Result<()> {
+        const LINE_FACTOR: f32 = 0.5;
         let (mut x, mut y) = match delta {
-            MouseScrollDelta::LineDelta(x, y) => (x, y),
+            MouseScrollDelta::LineDelta(x, y) => (x * LINE_FACTOR, y * LINE_FACTOR),
             MouseScrollDelta::PixelDelta(PhysicalPosition { x, y }) => (x as f32, y as f32),
         };
         if self.is_shift_pressed() {
