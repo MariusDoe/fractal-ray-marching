@@ -124,7 +124,7 @@ fn menger_sponge(position: Position, cross_size: Scalar, scale_factor: Scalar) -
     return object(distance, colorize(position));
 }
 
-fn koch3D(position: Position) -> Object {
+fn koch3D(position: Position, normal_z: Scalar) -> Object {
     var p = position;
     let top = Position(0, 1, 0);
     let sqrt3 = sqrt(3);
@@ -132,7 +132,7 @@ fn koch3D(position: Position) -> Object {
     let left = Position(-1.5, 0, -offset);
     let right = Position(1.5, 0, -offset);
     let back = Position(0, 0, sqrt3);
-    let normal_1 = normalize(vec3(0, 1, sqrt3));
+    let normal_1 = normalize(vec3(0, 1, normal_z));
     let normal_2 = normal_1 * vec3(1, -1, 1);
     var scale_factor = 2.0;
     p *= scale_factor;
@@ -229,9 +229,12 @@ fn scene(position: Position) -> Object {
             return sierpinski_tetrahedron(position);
         }
         case 15: {
-            return koch3D(position);
+            return koch3D(position, sqrt(3));
         }
         case 16: {
+            return koch3D(position, animate_between(sqrt(3), 4));
+        }
+        case 17: {
             return mandelbulb(position, animate_between(1, 9), 4.0);
         }
     }
