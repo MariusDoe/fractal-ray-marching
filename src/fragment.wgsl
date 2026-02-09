@@ -258,7 +258,6 @@ const AMBIENT_OCCLUSION_SHARPNESS = 60;
 const FOV_DEGREES = 90;
 const PI = 3.141592653589793238;
 const TWO_PI = 2 * PI;
-const CAMERA_DIRECTION_DEPTH = 1 / atan(FOV_DEGREES * PI / 180);
 
 const INFINITY = pow(10, 20);
 
@@ -328,7 +327,8 @@ fn transform_direction(direction: Direction) -> Direction {
 
 @fragment
 fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec4<Scalar> {
-    let camera_direction = transform_direction(normalize(vec3(screen_position * parameters.aspect_scale, CAMERA_DIRECTION_DEPTH)));
+    const CAMERA_DIRECTION_Z = 1 / atan(FOV_DEGREES * PI / 180);
+    let camera_direction = transform_direction(normalize(vec3(screen_position * parameters.aspect_scale, CAMERA_DIRECTION_Z)));
     let camera_position = transform_position(vec3(0));
     let object_result = march(camera_position, camera_direction);
     var color = object_result.color;
