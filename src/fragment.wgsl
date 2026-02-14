@@ -76,6 +76,10 @@ fn scene(position: Position) -> Object {
     }
 }
 
+fn animate_between(a: Scalar, b: Scalar) -> Scalar {
+    return a + (b - a) * (0.5 + 0.5 * sin(parameters.time * 0.2));
+}
+
 alias Scalar = f32;
 alias Distance = Scalar;
 alias Vector = vec3<Scalar>;
@@ -99,6 +103,16 @@ fn object(distance: Distance, color: Color) -> Object {
     object.color = color;
     return object;
 }
+
+struct Parameters {
+    camera_matrix: mat4x4<Scalar>,
+    aspect_scale: vec2<Scalar>,
+    time: Scalar,
+    num_iterations: u32,
+    scene_index: u32,
+}
+
+@group(0) @binding(0) var<uniform> parameters: Parameters;
 
 fn colorize(position: Position) -> Color {
     return min(Color(1), position + 0.5);
@@ -263,20 +277,6 @@ fn mandelbulb(position: Position, power: Scalar, bailout: Scalar) -> Object {
     let distance = 0.5 * log(magnitude) * magnitude / magnitude_derivative;
     return object(distance, colorize(position));
 }
-
-fn animate_between(a: Scalar, b: Scalar) -> Scalar {
-    return a + (b - a) * (0.5 + 0.5 * sin(parameters.time / 5));
-}
-
-struct Parameters {
-    camera_matrix: mat4x4<Scalar>,
-    aspect_scale: vec2<Scalar>,
-    time: Scalar,
-    num_iterations: u32,
-    scene_index: u32,
-}
-
-@group(0) @binding(0) var<uniform> parameters: Parameters;
 
 struct MarchResult {
     position: Position,
