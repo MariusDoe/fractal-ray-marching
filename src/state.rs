@@ -5,8 +5,8 @@ use crate::{
 use anyhow::{Context, Ok, Result};
 use wgpu::{
     BindGroup, Color, CommandEncoder, CommandEncoderDescriptor, LoadOp, Operations,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TextureView,
-    TextureViewDescriptor,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, SurfaceTexture,
+    TextureView, TextureViewDescriptor,
 };
 use winit::{
     dpi::PhysicalPosition,
@@ -55,38 +55,49 @@ impl State {
     }
 
     fn render(&mut self) -> Result<()> {
-        let mut encoder = self
-            .persistent
-            .device
-            .create_command_encoder(&CommandEncoderDescriptor::default());
+        let PersistentState {
+            device,
+            surface,
+            queue,
+            window,
+            ..
+        } = &self.persistent;
+        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor::default());
+        self.do_render_texture_pass(&mut encoder);
+        let frame = surface
+            .get_current_texture()
+            .context("failed to get frame texture")?;
+        self.do_blit_pass(&mut encoder, &frame)?;
+        queue.submit(Some(encoder.finish()));
+        window.pre_present_notify();
+        frame.present();
+        window.request_redraw();
+        Ok(())
+    }
+
+    fn do_render_texture_pass(&self, encoder: &mut CommandEncoder) {
         let render_texture_view = self
             .blit
             .render_texture
             .create_view(&TextureViewDescriptor::default());
         self.do_render_pass(
-            &mut encoder,
+            encoder,
             "render_pass",
             &render_texture_view,
             &self.render.render_pipeline,
             &self.persistent.parameters_bind_group,
         );
-        let frame = self
-            .persistent
-            .surface
-            .get_current_texture()
-            .context("failed to get frame texture")?;
+    }
+
+    fn do_blit_pass(&self, encoder: &mut CommandEncoder, frame: &SurfaceTexture) -> Result<()> {
         let frame_texture_view = frame.texture.create_view(&TextureViewDescriptor::default());
         self.do_render_pass(
-            &mut encoder,
+            encoder,
             "blit_render_pass",
             &frame_texture_view,
             &self.persistent.blit_render_pipeline,
             &self.blit.blit_bind_group,
         );
-        self.persistent.queue.submit(Some(encoder.finish()));
-        self.persistent.window.pre_present_notify();
-        frame.present();
-        self.persistent.window.request_redraw();
         Ok(())
     }
 
