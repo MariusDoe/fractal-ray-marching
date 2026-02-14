@@ -233,30 +233,35 @@ fn koch3D(position: Position, normal_z: Scalar) -> Object {
 
 fn mandelbulb(position: Position, power: Scalar, bailout: Scalar) -> Object {
     // adapted from http://blog.hvidtfeldts.net/index.php/2011/09/distance-estimated-3d-fractals-v-the-mandelbulb-different-de-approximations/
-    var z = position;
-    var dr = 1.0;
-    var r = 0.0;
+    var current = position;
+    var magnitude_derivative = 1.0;
+    var magnitude = 0.0;
     for (var i = 0u; i <= parameters.num_iterations; i++) {
-        r = length(z);
-        if (r > bailout) {
+        magnitude = length(current);
+        if (magnitude > bailout) {
             break;
         }
 
         // convert to polar coordinates
-        var theta = acos(z.z / r);
-        var phi = atan2(z.y, z.x);
-        dr = pow(r, power - 1.0) * power * dr + 1.0;
+        let theta = acos(current.z / magnitude);
+        let phi = atan2(current.y, current.x);
+        magnitude_derivative = pow(magnitude, power - 1.0) * power * magnitude_derivative + 1.0;
 
         // scale and rotate the point
-        let zr = pow(r, power);
-        theta = theta * power;
-        phi = phi * power;
+        let exp_magnitude = pow(magnitude, power);
+        let exp_theta = theta * power;
+        let exp_phi = phi * power;
 
         // convert back to cartesian coordinates
-        z = zr * Position(sin(theta) * cos(phi), sin(phi) * sin(theta), cos(theta));
-        z += position;
+        current = exp_magnitude * Position(
+            sin(exp_theta) * cos(exp_phi),
+            sin(exp_phi) * sin(exp_theta),
+            cos(exp_theta),
+        );
+        current += position;
     }
-    return object(0.5 * log(r) * r / dr, colorize(position));
+    let distance = 0.5 * log(magnitude) * magnitude / magnitude_derivative;
+    return object(distance, colorize(position));
 }
 
 fn animate_between(a: Scalar, b: Scalar) -> Scalar {
