@@ -161,29 +161,29 @@ fn mirror(position: Position, anchor: Position, normal: Direction) -> Position {
 }
 
 fn sierpinski_tetrahedron(position: Position) -> Object {
-    let base_scale_factor = 0.5;
-    let scale_factor = base_scale_factor / Scalar(1 << parameters.num_iterations);
-    let height = 4 / sqrt(6);
-    let top = Position(0, height * base_scale_factor, 0);
-    let one_over_sqrt_3 = 1 / sqrt(3);
-    let a = top + scale_factor * Direction(-1, -height, -one_over_sqrt_3);
-    let b = top + scale_factor * Direction(1, -height, -one_over_sqrt_3);
-    let c = top + scale_factor * Direction(0, -height, 2 * one_over_sqrt_3);
-    let a_top = a - top;
-    let b_top = b - top;
-    let c_top = c - top;
-    let a_normal = normalize(top - a);
-    let b_normal = normalize(top - b);
-    let c_normal = normalize(top - c);
+    const BASE_SCALE_FACTOR = 0.5;
+    let scale_factor = BASE_SCALE_FACTOR / Scalar(1 << parameters.num_iterations);
+    const HEIGHT = 4 / sqrt(6);
+    const TOP = Position(0, HEIGHT * BASE_SCALE_FACTOR, 0);
+    const ONE_OVER_SQRT_3 = 1 / sqrt(3);
+    let a = TOP + scale_factor * Direction(-1, -HEIGHT, -ONE_OVER_SQRT_3);
+    let b = TOP + scale_factor * Direction(1, -HEIGHT, -ONE_OVER_SQRT_3);
+    let c = TOP + scale_factor * Direction(0, -HEIGHT, 2 * ONE_OVER_SQRT_3);
+    let a_top = a - TOP;
+    let b_top = b - TOP;
+    let c_top = c - TOP;
+    let a_normal = normalize(TOP - a);
+    let b_normal = normalize(TOP - b);
+    let c_normal = normalize(TOP - c);
     var p = position;
-    p.y += height * base_scale_factor * 0.5;
+    p.y += HEIGHT * BASE_SCALE_FACTOR * 0.5;
     for (var i = i32(parameters.num_iterations) - 1; i >= 0; i--) {
         let distance = Scalar(1 << u32(i));
-        p = mirror(p, top + distance * a_top, a_normal);
-        p = mirror(p, top + distance * b_top, b_normal);
-        p = mirror(p, top + distance * c_top, c_normal);
+        p = mirror(p, TOP + distance * a_top, a_normal);
+        p = mirror(p, TOP + distance * b_top, b_normal);
+        p = mirror(p, TOP + distance * c_top, c_normal);
     }
-    return object(tetrahedron(p, top, a, b, c), colorize(1.5 * position));
+    return object(tetrahedron(p, TOP, a, b, c), colorize(1.5 * position));
 }
 
 fn repeat(position: Position) -> Position {
