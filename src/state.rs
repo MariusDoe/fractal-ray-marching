@@ -121,25 +121,17 @@ impl State {
         Ok(())
     }
 
-    fn is_shift_pressed(&self) -> bool {
-        self.held_keys.contains(HeldKeys::Shift)
-    }
-
-    fn is_control_pressed(&self) -> bool {
-        self.held_keys.contains(HeldKeys::Control)
-    }
-
     pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) -> Result<()> {
         const LINE_FACTOR: f32 = 0.5;
         let (mut x, mut y) = match delta {
             MouseScrollDelta::LineDelta(x, y) => (x * LINE_FACTOR, y * LINE_FACTOR),
             MouseScrollDelta::PixelDelta(PhysicalPosition { x, y }) => (x as f32, y as f32),
         };
-        if self.is_shift_pressed() {
+        if self.held_keys.is_shift_pressed() {
             x += y;
             y = 0.0;
         }
-        if self.is_control_pressed() {
+        if self.held_keys.is_control_pressed() {
             self.timing.update_time_factor(y);
         } else {
             self.camera.update_orbit_speed(x);

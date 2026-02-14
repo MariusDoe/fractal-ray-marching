@@ -21,6 +21,14 @@ bitflags! {
 type Magnitude = i8;
 
 impl HeldKeys {
+    pub fn is_shift_pressed(&self) -> bool {
+        self.contains(Self::Shift)
+    }
+
+    pub fn is_control_pressed(&self) -> bool {
+        self.contains(Self::Control)
+    }
+
     fn magnitude(&self, positive: Self, negative: Self) -> Magnitude {
         Magnitude::from(self.contains(positive)) - Magnitude::from(self.contains(negative))
     }
