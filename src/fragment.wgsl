@@ -199,9 +199,9 @@ fn cross_inside(position: Position, size: Distance) -> Distance {
 }
 
 fn menger_sponge(position: Position, cross_size: Scalar, scale_factor: Scalar) -> Object {
-    let size = 0.5;
-    var distance = box(position, Vector(size));
-    var scale = 0.5 / size;
+    const SIZE = 0.5;
+    var distance = box(position, Vector(SIZE));
+    var scale = 0.5 / SIZE;
     for (var i = 0u; i < parameters.num_iterations; i++) {
         distance = max(distance, -cross_inside(repeat(position * scale), cross_size) / scale);
         scale *= scale_factor;
