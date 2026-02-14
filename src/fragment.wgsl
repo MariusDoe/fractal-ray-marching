@@ -118,10 +118,6 @@ fn colorize(position: Position) -> Color {
     return min(Color(1), position + 0.5);
 }
 
-fn sphere(position: Position, radius: Distance) -> Distance {
-    return length(position) - radius;
-}
-
 fn max_component_2(a: vec2<Scalar>) -> Scalar {
     return max(a.x, a.y);
 }
@@ -157,13 +153,6 @@ fn tetrahedron(position: Position, a: Position, b: Position, c: Position, d: Pos
         half_space(position, a, plane_normal(a, c, d))),
         half_space(position, a, plane_normal(a, d, b))),
         half_space(position, b, plane_normal(b, d, c)));
-}
-
-fn object_union(a: Object, b: Object) -> Object {
-    let distance = min(a.distance, b.distance);
-    let factor = step(b.distance, distance);
-    let color = mix(a.color, b.color, factor);
-    return object(distance, color);
 }
 
 fn mirror(position: Position, anchor: Position, normal: Direction) -> Position {
