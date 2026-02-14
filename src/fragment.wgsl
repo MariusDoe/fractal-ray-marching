@@ -126,7 +126,7 @@ fn min_comp3(a: Vector) -> Scalar {
 
 fn box(position: Position, size: Vector) -> Distance {
     let q = abs(position) - size;
-    return length(max(q, vec3(0))) + min(max_comp3(q), 0);
+    return length(max(q, Vector(0))) + min(max_comp3(q), 0);
 }
 
 fn half_space(position: Position, anchor: Position, normal: Direction) -> Distance {
@@ -161,11 +161,11 @@ fn sierpinski_tetrahedron(position: Position) -> Object {
     let base_scale_factor = 0.5;
     let scale_factor = base_scale_factor / Scalar(1 << parameters.num_iterations);
     let height = 4 / sqrt(6);
-    let top = vec3(0, height * base_scale_factor, 0);
+    let top = Position(0, height * base_scale_factor, 0);
     let one_over_sqrt_3 = 1 / sqrt(3);
-    let a = top + scale_factor * vec3(-1, -height, -one_over_sqrt_3);
-    let b = top + scale_factor * vec3(1, -height, -one_over_sqrt_3);
-    let c = top + scale_factor * vec3(0, -height, 2 * one_over_sqrt_3);
+    let a = top + scale_factor * Direction(-1, -height, -one_over_sqrt_3);
+    let b = top + scale_factor * Direction(1, -height, -one_over_sqrt_3);
+    let c = top + scale_factor * Direction(0, -height, 2 * one_over_sqrt_3);
     let a_top = a - top;
     let b_top = b - top;
     let c_top = c - top;
@@ -192,12 +192,12 @@ fn cross_inside(position: Position, size: Distance) -> Distance {
     let x = max_comp2(p.yz);
     let y = max_comp2(p.zx);
     let z = max_comp2(p.xy);
-    return min_comp3(vec3(x, y, z)) - size;
+    return min_comp3(Position(x, y, z)) - size;
 }
 
 fn menger_sponge(position: Position, cross_size: Scalar, scale_factor: Scalar) -> Object {
     let size = 0.5;
-    var distance = box(position, vec3(size));
+    var distance = box(position, Vector(size));
     var scale = 0.5 / size;
     for (var i = 0u; i < parameters.num_iterations; i++) {
         distance = max(distance, -cross_inside(repeat(position * scale), cross_size) / scale);
@@ -214,8 +214,8 @@ fn koch3D(position: Position, normal_z: Scalar) -> Object {
     let left = Position(-1.5, 0, -offset);
     let right = Position(1.5, 0, -offset);
     let back = Position(0, 0, sqrt3);
-    let normal_1 = normalize(vec3(0, 1, normal_z));
-    let normal_2 = normal_1 * vec3(1, -1, 1);
+    let normal_1 = normalize(Direction(0, 1, normal_z));
+    let normal_2 = normal_1 * Vector(1, -1, 1);
     var scale_factor = 2.0;
     p *= scale_factor;
     for (var i = 0u; i < parameters.num_iterations; i++) {
@@ -253,7 +253,7 @@ fn mandelbulb(position: Position, power: Scalar, bailout: Scalar) -> Object {
         phi = phi * power;
 
         // convert back to cartesian coordinates
-        z = zr * vec3(sin(theta) * cos(phi), sin(phi) * sin(theta), cos(theta));
+        z = zr * Position(sin(theta) * cos(phi), sin(phi) * sin(theta), cos(theta));
         z += position;
     }
     return object(0.5 * log(r) * r / dr, colorize(position));
@@ -330,8 +330,8 @@ fn transform_direction(direction: Direction) -> Direction {
 @fragment
 fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec4<Scalar> {
     const CAMERA_DIRECTION_Z = 1 / atan(FOV_DEGREES * PI / 180);
-    let camera_direction = transform_direction(normalize(vec3(screen_position * parameters.aspect_scale, CAMERA_DIRECTION_Z)));
-    let camera_position = transform_position(vec3(0));
+    let camera_direction = transform_direction(normalize(Direction(screen_position * parameters.aspect_scale, CAMERA_DIRECTION_Z)));
+    let camera_position = transform_position(Position(0));
     let object_result = march(camera_position, camera_direction);
     var color = object_result.color;
     if (object_result.distance >= 0) {
