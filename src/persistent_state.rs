@@ -1,6 +1,6 @@
 use crate::{
     camera::Camera,
-    key_state::KeyState,
+    held_keys::HeldKeys,
     parameters::Parameters,
     utils::{create_render_pipeline, limited_quadratric_delta},
 };
@@ -188,9 +188,9 @@ impl PersistentState {
         Ok(())
     }
 
-    pub fn update(&mut self, key_state: KeyState) {
+    pub fn update(&mut self, held_keys: HeldKeys) {
         let delta_time = self.update_time();
-        self.camera.update(key_state, delta_time);
+        self.camera.update(held_keys, delta_time);
         self.parameters.update_camera(&self.camera);
         self.queue.write_buffer(
             &self.parameters_buffer,

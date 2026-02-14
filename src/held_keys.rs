@@ -2,7 +2,7 @@ use bitflags::bitflags;
 
 bitflags! {
     #[derive(Debug, Default, Clone, Copy)]
-    pub struct KeyState: u16 {
+    pub struct HeldKeys: u16 {
         const MoveForward = 1 << 0;
         const MoveBackward = 1 << 1;
         const MoveRight = 1 << 2;
@@ -20,7 +20,7 @@ bitflags! {
 
 type Magnitude = i8;
 
-impl KeyState {
+impl HeldKeys {
     fn magnitude(&self, positive: Self, negative: Self) -> Magnitude {
         Magnitude::from(self.contains(positive)) - Magnitude::from(self.contains(negative))
     }

@@ -1,4 +1,4 @@
-use crate::{key_state::KeyState, utils::limited_quadratric_delta};
+use crate::{held_keys::HeldKeys, utils::limited_quadratric_delta};
 use cgmath::{Angle, InnerSpace, Matrix3, Matrix4, Rad, Vector2, Vector3, Zero, num_traits::clamp};
 use std::{f32::consts::FRAC_PI_2, time::Duration};
 
@@ -97,14 +97,14 @@ impl Camera {
         };
     }
 
-    pub fn update(&mut self, keys: KeyState, delta_time: Duration) {
+    pub fn update(&mut self, keys: HeldKeys, delta_time: Duration) {
         let seconds = delta_time.as_secs_f32();
         self.do_movement(keys, seconds);
         self.do_orbit(seconds);
         self.do_lock_rotation();
     }
 
-    fn do_movement(&mut self, keys: KeyState, seconds: f32) {
+    fn do_movement(&mut self, keys: HeldKeys, seconds: f32) {
         let movement = self.forward() * keys.forward_magnitude().into()
             + self.right() * keys.right_magnitude().into()
             + self.up() * keys.up_magnitude().into();

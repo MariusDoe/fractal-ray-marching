@@ -4,7 +4,7 @@ use winit::event_loop::EventLoop;
 mod app;
 mod blit_state;
 mod camera;
-mod key_state;
+mod held_keys;
 mod parameters;
 mod persistent_state;
 mod render_state;

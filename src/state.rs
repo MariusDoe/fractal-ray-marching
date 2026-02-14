@@ -1,5 +1,5 @@
 use crate::{
-    blit_state::BlitState, key_state::KeyState, persistent_state::PersistentState,
+    blit_state::BlitState, held_keys::HeldKeys, persistent_state::PersistentState,
     render_state::RenderState,
 };
 use anyhow::{Context, Ok, Result};
@@ -21,7 +21,7 @@ pub struct State {
     pub persistent: PersistentState,
     render: RenderState,
     blit: BlitState,
-    key_state: KeyState,
+    held_keys: HeldKeys,
     last_cursor_position: Option<PhysicalPosition<f64>>,
     cursor_grabbed: bool,
 }
@@ -33,12 +33,12 @@ impl State {
         let persistent = PersistentState::init(event_loop).await?;
         let render = RenderState::init(&persistent)?;
         let blit = BlitState::init(&persistent);
-        let key_state = KeyState::default();
+        let held_keys = HeldKeys::default();
         Ok(Self {
             persistent,
             render,
             blit,
-            key_state,
+            held_keys,
             cursor_grabbed: false,
             last_cursor_position: None,
         })
@@ -51,7 +51,7 @@ impl State {
     }
 
     fn update(&mut self) {
-        self.persistent.update(self.key_state);
+        self.persistent.update(self.held_keys);
     }
 
     fn render(&mut self) -> Result<()> {
@@ -148,12 +148,12 @@ impl State {
     }
 
     pub fn handle_key(&mut self, event: &KeyEvent) -> Result<()> {
-        self.handle_key_state_keys(event);
-        self.handle_single_press_keys(event)?;
+        self.handle_held_keys(event);
+        self.handle_trigger_keys(event)?;
         Ok(())
     }
 
-    fn handle_single_press_keys(&mut self, event: &KeyEvent) -> Result<()> {
+    fn handle_trigger_keys(&mut self, event: &KeyEvent) -> Result<()> {
         if event.state != ElementState::Pressed {
             return Ok(());
         }
@@ -185,29 +185,29 @@ impl State {
         Ok(())
     }
 
-    fn handle_key_state_keys(&mut self, event: &KeyEvent) {
+    fn handle_held_keys(&mut self, event: &KeyEvent) {
         macro_rules! match_key {
-            ($($key:expr => $key_state:expr,)* else => $default:expr $(,)?) => {
-                $(if event.logical_key == $key { $key_state } else )*
+            ($($key:expr => $held_key:expr,)* else => $default:expr $(,)?) => {
+                $(if event.logical_key == $key { $held_key } else )*
                 { $default }
             };
         }
-        let key_state = match_key! {
-            "w" => KeyState::MoveForward,
-            "s" => KeyState::MoveBackward,
-            "a" => KeyState::MoveLeft,
-            "d" => KeyState::MoveRight,
-            "q" => KeyState::MoveDown,
-            "e" => KeyState::MoveUp,
-            NamedKey::ArrowDown => KeyState::PitchDown,
-            NamedKey::ArrowUp => KeyState::PitchUp,
-            NamedKey::ArrowRight => KeyState::YawRight,
-            NamedKey::ArrowLeft => KeyState::YawLeft,
-            NamedKey::Shift => KeyState::Shift,
-            NamedKey::Control => KeyState::Control,
+        let held_key = match_key! {
+            "w" => HeldKeys::MoveForward,
+            "s" => HeldKeys::MoveBackward,
+            "a" => HeldKeys::MoveLeft,
+            "d" => HeldKeys::MoveRight,
+            "q" => HeldKeys::MoveDown,
+            "e" => HeldKeys::MoveUp,
+            NamedKey::ArrowDown => HeldKeys::PitchDown,
+            NamedKey::ArrowUp => HeldKeys::PitchUp,
+            NamedKey::ArrowRight => HeldKeys::YawRight,
+            NamedKey::ArrowLeft => HeldKeys::YawLeft,
+            NamedKey::Shift => HeldKeys::Shift,
+            NamedKey::Control => HeldKeys::Control,
             else => return,
         };
-        self.key_state.set(key_state, event.state.is_pressed());
+        self.held_keys.set(held_key, event.state.is_pressed());
     }
 
     pub fn handle_mouse(&mut self, button: MouseButton, state: ElementState) -> Result<()> {
@@ -218,11 +218,11 @@ impl State {
     }
 
     fn is_shift_pressed(&self) -> bool {
-        self.key_state.contains(KeyState::Shift)
+        self.held_keys.contains(HeldKeys::Shift)
     }
 
     fn is_control_pressed(&self) -> bool {
-        self.key_state.contains(KeyState::Control)
+        self.held_keys.contains(HeldKeys::Control)
     }
 
     pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) -> Result<()> {
