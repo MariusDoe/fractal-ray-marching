@@ -6,11 +6,11 @@ mod blit_graphics;
 mod camera;
 mod graphics;
 mod held_keys;
+mod initialized_app;
 mod parameters;
 mod persistent_graphics;
 mod reloadable_graphics;
 mod render_texture_config;
-mod state;
 mod timing;
 mod utils;
 

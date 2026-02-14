@@ -10,7 +10,7 @@ use winit::{
 };
 
 #[derive(Debug)]
-pub struct State {
+pub struct InitializedApp {
     graphics: Graphics,
     held_keys: HeldKeys,
     parameters: Parameters,
@@ -18,7 +18,7 @@ pub struct State {
     timing: Timing,
 }
 
-impl State {
+impl InitializedApp {
     pub async fn init(event_loop: &ActiveEventLoop) -> Result<Self> {
         let graphics = Graphics::init(event_loop).await?;
         let mut parameters = Parameters::default();
