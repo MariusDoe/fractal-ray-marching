@@ -122,25 +122,25 @@ fn sphere(position: Position, radius: Distance) -> Distance {
     return length(position) - radius;
 }
 
-fn max_comp2(a: vec2<Scalar>) -> Scalar {
+fn max_component_2(a: vec2<Scalar>) -> Scalar {
     return max(a.x, a.y);
 }
 
-fn min_comp2(a: vec2<Scalar>) -> Scalar {
+fn min_component_2(a: vec2<Scalar>) -> Scalar {
     return min(a.x, a.y);
 }
 
-fn max_comp3(a: Vector) -> Scalar {
-    return max(max_comp2(a.xy), a.z);
+fn max_component_3(a: Vector) -> Scalar {
+    return max(max_component_2(a.xy), a.z);
 }
 
-fn min_comp3(a: Vector) -> Scalar {
-    return min(min_comp2(a.xy), a.z);
+fn min_component_3(a: Vector) -> Scalar {
+    return min(min_component_2(a.xy), a.z);
 }
 
 fn box(position: Position, size: Vector) -> Distance {
     let q = abs(position) - size;
-    return length(max(q, Vector(0))) + min(max_comp3(q), 0);
+    return length(max(q, Vector(0))) + min(max_component_3(q), 0);
 }
 
 fn half_space(position: Position, anchor: Position, normal: Direction) -> Distance {
@@ -203,10 +203,10 @@ fn repeat(position: Position) -> Position {
 
 fn cross_inside(position: Position, size: Distance) -> Distance {
     let p = abs(position);
-    let x = max_comp2(p.yz);
-    let y = max_comp2(p.zx);
-    let z = max_comp2(p.xy);
-    return min_comp3(Position(x, y, z)) - size;
+    let x = max_component_2(p.yz);
+    let y = max_component_2(p.zx);
+    let z = max_component_2(p.xy);
+    return min_component_3(Position(x, y, z)) - size;
 }
 
 fn menger_sponge(position: Position, cross_size: Scalar, scale_factor: Scalar) -> Object {
