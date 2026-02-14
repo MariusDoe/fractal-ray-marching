@@ -282,7 +282,7 @@ fn march(start_position: Position, direction: Direction) -> MarchResult {
     result.position = start_position;
     result.distance = -INFINITY;
     result.color = BACKGROUND_COLOR;
-    var total_distance: f32 = 0;
+    var total_distance = Distance(0);
     var closeness = INFINITY;
     var iteration = 0u;
     for (; iteration < MAX_ITERATIONS && total_distance < MAX_TOTAL_DISTANCE; iteration++) {
@@ -338,9 +338,9 @@ fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec
         let halfway = normalize(to_camera + to_sun);
         let specular = pow(max(dot(halfway, object_normal), 0), SPECULAR_SHARPNESS);
         let sun_result = march(object_position + object_normal * 2 * MIN_DISTANCE, to_sun);
-        let ambient_occlusion = pow(1 - f32(object_result.steps) / f32(MAX_ITERATIONS), AMBIENT_OCCLUSION_SHARPNESS);
+        let ambient_occlusion = pow(1 - Scalar(object_result.steps) / Scalar(MAX_ITERATIONS), AMBIENT_OCCLUSION_SHARPNESS);
         color *= mix(AMBIENT_OCCLUSION_FACTOR, 1, ambient_occlusion);
-        let shadow = f32(sun_result.distance < 0) * SHADOW_SHARPNESS * sun_result.closeness;
+        let shadow = Scalar(sun_result.distance < 0) * SHADOW_SHARPNESS * sun_result.closeness;
         color *= mix(SHADOW_FACTOR, 1, clamp(shadow, 0, 1));
         color += shadow * specular * SUN_COLOR;
     }
