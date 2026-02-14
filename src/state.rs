@@ -126,7 +126,9 @@ impl State {
         });
         render_pass.set_pipeline(render_pipeline);
         render_pass.set_bind_group(0, bind_group, &[]);
-        render_pass.draw(0..4, 0..1);
+        let vertices = 0..4; // a quad
+        let single_instance = 0..1;
+        render_pass.draw(vertices, single_instance);
     }
 
     fn reload(&mut self) -> Result<()> {
