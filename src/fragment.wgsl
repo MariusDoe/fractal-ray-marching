@@ -210,28 +210,30 @@ fn menger_sponge(position: Position, cross_size: Scalar, scale_factor: Scalar) -
 }
 
 fn koch3D(position: Position, normal_z: Scalar) -> Object {
-    var p = position;
-    let top = Position(0, 1, 0);
-    let sqrt3 = sqrt(3);
-    var offset = sqrt(3 * 3 - 1.5 * 1.5) - sqrt3;
-    let left = Position(-1.5, 0, -offset);
-    let right = Position(1.5, 0, -offset);
-    let back = Position(0, 0, sqrt3);
+    const SIDE_LENGTH = Scalar(3);
+    const HALF_SIDE_LENGTH = SIDE_LENGTH / 2;
+    const SIDE_LENGTH_SQRT = sqrt(SIDE_LENGTH);
+    const OFFSET = sqrt(SIDE_LENGTH * SIDE_LENGTH - HALF_SIDE_LENGTH * HALF_SIDE_LENGTH) - SIDE_LENGTH_SQRT;
+    const TOP = Position(0, 1, 0);
+    const LEFT = Position(-HALF_SIDE_LENGTH, 0, -OFFSET);
+    const RIGHT = Position(HALF_SIDE_LENGTH, 0, -OFFSET);
+    const BACK = Position(0, 0, SIDE_LENGTH_SQRT);
     let normal_1 = normalize(Direction(0, 1, normal_z));
     let normal_2 = normal_1 * Vector(1, -1, 1);
+    var p = position;
     var scale_factor = 2.0;
     p *= scale_factor;
     for (var i = 0u; i < parameters.num_iterations; i++) {
-        let factor = 3.0 / 2.0;
-        scale_factor *= factor;
-        p *= factor;
+        const FACTOR = 3.0 / 2.0;
+        scale_factor *= FACTOR;
+        p *= FACTOR;
         p = p.yxz;
         p = mirror(p, Position(0), normal_1);
         p = mirror(p, Position(0), normal_2);
-        p.z -= offset;
+        p.z -= OFFSET;
     }
     p.y = abs(p.y);
-    return object(tetrahedron(p, top, left, right, back) / scale_factor, colorize(position));
+    return object(tetrahedron(p, TOP, LEFT, RIGHT, BACK) / scale_factor, colorize(position));
 }
 
 fn mandelbulb(position: Position, power: Scalar, bailout: Scalar) -> Object {
