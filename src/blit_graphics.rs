@@ -1,27 +1,30 @@
-use crate::persistent_state::PersistentState;
+use crate::{persistent_graphics::PersistentGraphics, render_texture_config::RenderTextureConfig};
 use wgpu::{
     BindGroup, BindGroupDescriptor, BindGroupEntry, BindingResource, Extent3d, Texture,
     TextureDescriptor, TextureDimension, TextureFormat, TextureUsages, TextureViewDescriptor,
 };
 
 #[derive(Debug)]
-pub struct BlitState {
+pub struct BlitGraphics {
     pub render_texture: Texture,
     pub blit_bind_group: BindGroup,
 }
 
-impl BlitState {
+impl BlitGraphics {
     pub const RENDER_TEXTURE_FORMAT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
 
-    pub fn init(persistent: &PersistentState) -> Self {
-        let PersistentState {
+    pub fn init(
+        persistent: &PersistentGraphics,
+        render_texture_config: &RenderTextureConfig,
+    ) -> Self {
+        let PersistentGraphics {
             device,
             render_texture_sampler,
             blit_bind_group_layout,
             ..
         } = persistent;
         let render_texture = {
-            let (width, height) = persistent.render_texture_size();
+            let (width, height) = render_texture_config.render_texture_size();
             device.create_texture(&TextureDescriptor {
                 label: Some("render_texture"),
                 dimension: TextureDimension::D2,

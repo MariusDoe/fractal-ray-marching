@@ -32,7 +32,6 @@ impl App {
             }
             WindowEvent::Resized(..) => {
                 self.state_mut("got resize before initialization")
-                    .persistent
                     .resize()
                     .context("failed to resize")?;
             }

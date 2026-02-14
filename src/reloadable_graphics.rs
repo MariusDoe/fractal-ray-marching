@@ -1,6 +1,6 @@
 use crate::{
-    blit_state::BlitState,
-    persistent_state::PersistentState,
+    blit_graphics::BlitGraphics,
+    persistent_graphics::PersistentGraphics,
     utils::{create_render_pipeline, handle_device_errors},
 };
 use anyhow::{Context, Result};
@@ -8,13 +8,13 @@ use std::{borrow::Cow, fs::read_to_string, path::Path};
 use wgpu::{ErrorFilter, RenderPipeline, ShaderModuleDescriptor, ShaderSource};
 
 #[derive(Debug)]
-pub struct RenderState {
+pub struct ReloadableGraphics {
     pub render_pipeline: RenderPipeline,
 }
 
-impl RenderState {
-    pub fn init(persistent: &PersistentState) -> Result<Self> {
-        let PersistentState {
+impl ReloadableGraphics {
+    pub fn init(persistent: &PersistentGraphics) -> Result<Self> {
+        let PersistentGraphics {
             device,
             vertex_shader,
             parameters_bind_group_layout,
@@ -44,7 +44,7 @@ impl RenderState {
             "render_pipeline",
             vertex_shader,
             &fragment_shader,
-            BlitState::RENDER_TEXTURE_FORMAT,
+            BlitGraphics::RENDER_TEXTURE_FORMAT,
         );
         Ok(Self { render_pipeline })
     }

@@ -1,150 +1,54 @@
 use crate::{
-    blit_state::BlitState, held_keys::HeldKeys, persistent_state::PersistentState,
-    render_state::RenderState,
+    camera::Camera, graphics::Graphics, held_keys::HeldKeys, parameters::Parameters, timing::Timing,
 };
 use anyhow::{Context, Ok, Result};
-use wgpu::{
-    BindGroup, Color, CommandEncoder, CommandEncoderDescriptor, LoadOp, Operations,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, SurfaceTexture,
-    TextureView, TextureViewDescriptor,
-};
 use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, KeyEvent, MouseButton, MouseScrollDelta},
     event_loop::ActiveEventLoop,
     keyboard::NamedKey,
-    window::CursorGrabMode,
 };
 
 #[derive(Debug)]
 pub struct State {
-    pub persistent: PersistentState,
-    render: RenderState,
-    blit: BlitState,
+    graphics: Graphics,
     held_keys: HeldKeys,
-    last_cursor_position: Option<PhysicalPosition<f64>>,
-    cursor_grabbed: bool,
+    parameters: Parameters,
+    camera: Camera,
+    timing: Timing,
 }
 
 impl State {
-    const CLEAR_COLOR: Color = Color::BLACK;
-
     pub async fn init(event_loop: &ActiveEventLoop) -> Result<Self> {
-        let persistent = PersistentState::init(event_loop).await?;
-        let render = RenderState::init(&persistent)?;
-        let blit = BlitState::init(&persistent);
-        let held_keys = HeldKeys::default();
+        let graphics = Graphics::init(event_loop).await?;
+        let mut parameters = Parameters::default();
+        graphics
+            .resize(&mut parameters)
+            .context("failed to resize the surface")?;
         Ok(Self {
-            persistent,
-            render,
-            blit,
-            held_keys,
-            cursor_grabbed: false,
-            last_cursor_position: None,
+            graphics,
+            held_keys: HeldKeys::default(),
+            parameters,
+            camera: Camera::default(),
+            timing: Timing::init(),
         })
     }
 
     pub fn draw(&mut self) -> Result<()> {
         self.update();
-        self.render()?;
+        self.graphics.render()?;
         Ok(())
     }
 
     fn update(&mut self) {
-        self.persistent.update(self.held_keys);
+        let delta_time = self.timing.update(&mut self.parameters);
+        self.camera.update(self.held_keys, delta_time);
+        self.parameters.update_camera(&self.camera);
+        self.graphics.update_parameters_buffer(&self.parameters);
     }
 
-    fn render(&mut self) -> Result<()> {
-        let PersistentState {
-            device,
-            surface,
-            queue,
-            window,
-            ..
-        } = &self.persistent;
-        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor::default());
-        self.do_render_texture_pass(&mut encoder);
-        let frame = surface
-            .get_current_texture()
-            .context("failed to get frame texture")?;
-        self.do_blit_pass(&mut encoder, &frame)?;
-        queue.submit(Some(encoder.finish()));
-        window.pre_present_notify();
-        frame.present();
-        window.request_redraw();
-        Ok(())
-    }
-
-    fn do_render_texture_pass(&self, encoder: &mut CommandEncoder) {
-        let render_texture_view = self
-            .blit
-            .render_texture
-            .create_view(&TextureViewDescriptor::default());
-        self.do_render_pass(
-            encoder,
-            "render_pass",
-            &render_texture_view,
-            &self.render.render_pipeline,
-            &self.persistent.parameters_bind_group,
-        );
-    }
-
-    fn do_blit_pass(&self, encoder: &mut CommandEncoder, frame: &SurfaceTexture) -> Result<()> {
-        let frame_texture_view = frame.texture.create_view(&TextureViewDescriptor::default());
-        self.do_render_pass(
-            encoder,
-            "blit_render_pass",
-            &frame_texture_view,
-            &self.persistent.blit_render_pipeline,
-            &self.blit.blit_bind_group,
-        );
-        Ok(())
-    }
-
-    fn do_render_pass(
-        &self,
-        encoder: &mut CommandEncoder,
-        label: &'static str,
-        view: &TextureView,
-        render_pipeline: &RenderPipeline,
-        bind_group: &BindGroup,
-    ) {
-        let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
-            label: Some(label),
-            color_attachments: &[Some(RenderPassColorAttachment {
-                view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: Operations {
-                    load: LoadOp::Clear(Self::CLEAR_COLOR),
-                    store: StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        });
-        render_pass.set_pipeline(render_pipeline);
-        render_pass.set_bind_group(0, bind_group, &[]);
-        let vertices = 0..4; // a quad
-        let single_instance = 0..1;
-        render_pass.draw(vertices, single_instance);
-    }
-
-    fn reload(&mut self) -> Result<()> {
-        self.render = RenderState::init(&self.persistent).context("failed to reload")?;
-        Ok(())
-    }
-
-    fn try_reload(&mut self) {
-        if let Err(error) = self.reload() {
-            println!("{error:?}");
-        }
-    }
-
-    fn update_render_texture_size(&mut self, delta: i32) {
-        self.persistent.update_render_texture_size(delta);
-        self.blit = BlitState::init(&self.persistent);
+    pub fn resize(&mut self) -> Result<()> {
+        self.graphics.resize(&mut self.parameters)
     }
 
     pub fn handle_key(&mut self, event: &KeyEvent) -> Result<()> {
@@ -168,19 +72,19 @@ impl State {
             };
         }
         handle_keys!(
-            NamedKey::Escape => self.ungrab_cursor()?,
-            "r" => self.try_reload(),
-            "+" => self.persistent.parameters.update_num_iterations(1),
-            "-" => self.persistent.parameters.update_num_iterations(-1),
-            "o" => self.persistent.camera.reset_orbit_speed(),
-            "p" => self.persistent.camera.toggle_lock_pitch(),
-            "l" => self.persistent.camera.cycle_lock_yaw_mode(false),
-            "L" => self.persistent.camera.cycle_lock_yaw_mode(true),
-            "n" => self.persistent.parameters.update_scene_index(1),
-            "b" => self.persistent.parameters.update_scene_index(-1),
-            "t" => self.persistent.stop_time(),
-            ">" => self.update_render_texture_size(1),
-            "<" => self.update_render_texture_size(-1),
+            NamedKey::Escape => self.graphics.ungrab_cursor()?,
+            "+" => self.parameters.update_num_iterations(1),
+            "-" => self.parameters.update_num_iterations(-1),
+            "n" => self.parameters.update_scene_index(1),
+            "b" => self.parameters.update_scene_index(-1),
+            "o" => self.camera.reset_orbit_speed(),
+            "p" => self.camera.toggle_lock_pitch(),
+            "l" => self.camera.cycle_lock_yaw_mode(false),
+            "L" => self.camera.cycle_lock_yaw_mode(true),
+            "t" => self.timing.stop_time(),
+            "r" => self.graphics.try_reload(),
+            ">" => self.graphics.update_render_texture_size(1),
+            "<" => self.graphics.update_render_texture_size(-1),
         );
         Ok(())
     }
@@ -212,7 +116,7 @@ impl State {
 
     pub fn handle_mouse(&mut self, button: MouseButton, state: ElementState) -> Result<()> {
         if button == MouseButton::Left && state == ElementState::Pressed {
-            self.grab_cursor()?;
+            self.graphics.grab_cursor()?;
         }
         Ok(())
     }
@@ -236,68 +140,29 @@ impl State {
             y = 0.0;
         }
         if self.is_control_pressed() {
-            self.persistent.update_time_factor(y);
+            self.timing.update_time_factor(y);
         } else {
-            self.persistent.camera.update_orbit_speed(x);
-            self.persistent.camera.update_speed(y);
+            self.camera.update_orbit_speed(x);
+            self.camera.update_speed(y);
         }
         Ok(())
     }
 
     pub fn handle_focused(&mut self, focused: bool) -> Result<()> {
         if !focused {
-            self.ungrab_cursor()?;
+            self.graphics.ungrab_cursor()?;
         }
         Ok(())
     }
 
     pub fn handle_cursor_movement(&mut self, position: PhysicalPosition<f64>) -> Result<()> {
-        if self.cursor_grabbed
-            && let Some(last_position) = self.last_cursor_position
-        {
-            let yaw = position.x - last_position.x;
-            let pitch = position.y - last_position.y;
-            self.persistent
-                .camera
+        let delta = self.graphics.move_cursor(position)?;
+        if let Some(delta) = delta {
+            let yaw = delta.x;
+            let pitch = delta.y;
+            self.camera
                 .rotate_from_cursor_movement(yaw as f32, pitch as f32);
-            self.persistent
-                .window
-                .set_cursor_position(last_position)
-                .context("failed to lock cursor in place")?;
-        } else {
-            self.last_cursor_position = Some(position);
         }
-        Ok(())
-    }
-
-    fn grab_cursor(&mut self) -> Result<()> {
-        if self.cursor_grabbed {
-            return Ok(());
-        }
-        const CURSOR_GRAB_MODE: CursorGrabMode = if cfg!(target_os = "macos") {
-            CursorGrabMode::Locked
-        } else {
-            CursorGrabMode::Confined
-        };
-        let window = &*self.persistent.window;
-        window
-            .set_cursor_grab(CURSOR_GRAB_MODE)
-            .context("failed to grab cursor")?;
-        window.set_cursor_visible(false);
-        self.cursor_grabbed = true;
-        Ok(())
-    }
-
-    fn ungrab_cursor(&mut self) -> Result<()> {
-        if !self.cursor_grabbed {
-            return Ok(());
-        }
-        let window = &*self.persistent.window;
-        window
-            .set_cursor_grab(CursorGrabMode::None)
-            .context("failed to ungrab cursor")?;
-        window.set_cursor_visible(true);
-        self.cursor_grabbed = false;
         Ok(())
     }
 }

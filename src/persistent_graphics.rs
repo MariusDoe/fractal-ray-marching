@@ -1,15 +1,6 @@
-use crate::{
-    camera::Camera,
-    held_keys::HeldKeys,
-    parameters::Parameters,
-    utils::{create_render_pipeline, limited_quadratric_delta},
-};
-use anyhow::{Context, Result};
-use std::{
-    borrow::Cow,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use crate::{parameters::Parameters, utils::create_render_pipeline};
+use anyhow::{Context, Ok, Result};
+use std::{borrow::Cow, sync::Arc};
 use wgpu::{
     Adapter, AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
     BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType, Buffer,
@@ -19,32 +10,30 @@ use wgpu::{
     ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface, TextureSampleType,
     TextureViewDimension,
 };
-use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop, window::Window};
+use winit::{
+    dpi::PhysicalSize,
+    event_loop::ActiveEventLoop,
+    window::{CursorGrabMode, Window},
+};
 
 #[derive(Debug)]
-pub struct PersistentState {
+pub struct PersistentGraphics {
     pub window: Arc<Window>,
     pub surface: Surface<'static>,
-    pub adapter: Adapter,
+    adapter: Adapter,
     pub device: Device,
     pub queue: Queue,
     pub render_texture_sampler: Sampler,
     pub blit_bind_group_layout: BindGroupLayout,
     pub blit_render_pipeline: RenderPipeline,
     pub vertex_shader: ShaderModule,
-    pub parameters: Parameters,
-    pub parameters_buffer: Buffer,
+    parameters_buffer: Buffer,
     pub parameters_bind_group_layout: BindGroupLayout,
     pub parameters_bind_group: BindGroup,
-    pub camera: Camera,
-    render_texture_factor: u32,
-    time_factor: f32,
-    last_frame_time: Instant,
-    last_fps_log: Instant,
-    frames_since_last_fps_log: u32,
+    pub is_cursor_grabbed: bool,
 }
 
-impl PersistentState {
+impl PersistentGraphics {
     pub async fn init(event_loop: &ActiveEventLoop) -> Result<Self> {
         let window = Arc::new(
             event_loop
@@ -151,90 +140,68 @@ impl PersistentState {
                 }),
             }],
         });
-        let start_time = Instant::now();
-        let mut state = Self {
+        Ok(Self {
             window,
             surface,
             adapter,
             device,
             queue,
-            render_texture_factor: 12, // 1920x1080
             render_texture_sampler,
             blit_bind_group_layout,
             blit_render_pipeline,
             vertex_shader,
-            parameters: Parameters::default(),
             parameters_buffer,
             parameters_bind_group_layout,
             parameters_bind_group,
-            camera: Camera::default(),
-            time_factor: 1.0,
-            last_frame_time: start_time,
-            last_fps_log: start_time,
-            frames_since_last_fps_log: 0,
-        };
-        state.resize().context("failed to resize the surface")?;
-        Ok(state)
+            is_cursor_grabbed: false,
+        })
     }
 
-    pub fn resize(&mut self) -> Result<()> {
+    pub fn resize(&self, parameters: &mut Parameters) -> Result<()> {
         let PhysicalSize { width, height } = self.window.inner_size();
         let config = self
             .surface
             .get_default_config(&self.adapter, width, height)
             .context("failed to get surface config")?;
         self.surface.configure(&self.device, &config);
-        self.parameters.update_aspect(width, height);
+        parameters.update_aspect(width, height);
         Ok(())
     }
 
-    pub fn update(&mut self, held_keys: HeldKeys) {
-        let delta_time = self.update_time();
-        self.camera.update(held_keys, delta_time);
-        self.parameters.update_camera(&self.camera);
+    pub fn update_parameters_buffer(&self, parameters: &Parameters) {
         self.queue.write_buffer(
             &self.parameters_buffer,
             0,
-            bytemuck::cast_slice(&[self.parameters]),
+            bytemuck::cast_slice(&[*parameters]),
         );
     }
 
-    pub fn render_texture_size(&self) -> (u32, u32) {
-        (
-            160 * self.render_texture_factor,
-            90 * self.render_texture_factor,
-        )
-    }
-
-    pub fn update_render_texture_size(&mut self, delta: i32) {
-        self.render_texture_factor =
-            std::cmp::max(1, self.render_texture_factor.saturating_add_signed(delta));
-    }
-
-    pub fn stop_time(&mut self) {
-        self.time_factor = 0.0;
-    }
-
-    pub fn update_time_factor(&mut self, delta: f32) {
-        self.time_factor += limited_quadratric_delta(self.time_factor, delta);
-    }
-
-    const FPS_LOG_INTERVAL: Duration = Duration::from_secs(1);
-
-    fn update_time(&mut self) -> Duration {
-        let now = Instant::now();
-        let delta_time = now - self.last_frame_time;
-        self.parameters
-            .update_time(self.time_factor * delta_time.as_secs_f32());
-        self.last_frame_time = now;
-        self.frames_since_last_fps_log += 1;
-        let time_since_last_fps_log = now - self.last_fps_log;
-        if time_since_last_fps_log >= Self::FPS_LOG_INTERVAL {
-            let fps = self.frames_since_last_fps_log as f32 / time_since_last_fps_log.as_secs_f32();
-            eprintln!("{fps:.1} FPS");
-            self.last_fps_log = now;
-            self.frames_since_last_fps_log = 0;
+    pub fn grab_cursor(&mut self) -> Result<()> {
+        if self.is_cursor_grabbed {
+            return Ok(());
         }
-        delta_time
+        const CURSOR_GRAB_MODE: CursorGrabMode = if cfg!(target_os = "macos") {
+            CursorGrabMode::Locked
+        } else {
+            CursorGrabMode::Confined
+        };
+        self.window
+            .set_cursor_grab(CURSOR_GRAB_MODE)
+            .context("failed to grab cursor")?;
+        self.window.set_cursor_visible(false);
+        self.is_cursor_grabbed = true;
+        Ok(())
+    }
+
+    pub fn ungrab_cursor(&mut self) -> Result<()> {
+        if !self.is_cursor_grabbed {
+            return Ok(());
+        }
+        self.window
+            .set_cursor_grab(CursorGrabMode::None)
+            .context("failed to ungrab cursor")?;
+        self.window.set_cursor_visible(true);
+        self.is_cursor_grabbed = false;
+        Ok(())
     }
 }
