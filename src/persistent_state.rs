@@ -216,8 +216,7 @@ impl PersistentState {
     }
 
     pub fn update_time_factor(&mut self, delta: f32) {
-        self.time_factor +=
-            limited_quadratric_delta(self.time_factor, delta, 0.025, 0.01, 1.0, 0.5);
+        self.time_factor += limited_quadratric_delta(self.time_factor, delta);
     }
 
     const FPS_LOG_INTERVAL: Duration = Duration::from_secs(1);

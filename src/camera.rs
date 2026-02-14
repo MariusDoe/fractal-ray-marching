@@ -65,10 +65,6 @@ impl Camera {
         self.orbit_angle_per_second += Rad(limited_quadratric_delta(
             self.orbit_angle_per_second.0,
             delta,
-            0.025,
-            0.0001,
-            0.1,
-            0.2,
         ));
     }
 

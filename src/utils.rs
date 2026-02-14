@@ -59,18 +59,11 @@ where
     }
 }
 
-pub fn limited_quadratric_delta(
-    current: f32,
-    delta: f32,
-    kickoff: f32,
-    min: f32,
-    max: f32,
-    linear: f32,
-) -> f32 {
+pub fn limited_quadratric_delta(current: f32, delta: f32) -> f32 {
     let factor = if current == 0.0 {
-        kickoff
+        0.025
     } else {
-        current.abs().clamp(min, max)
+        current.abs().clamp(0.0001, 0.1)
     };
-    linear * delta * factor
+    0.2 * delta * factor
 }
