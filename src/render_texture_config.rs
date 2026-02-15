@@ -15,8 +15,8 @@ impl RenderTextureConfig {
 
 impl Default for RenderTextureConfig {
     fn default() -> Self {
-        return Self {
+        Self {
             factor: 12, // 1920x1080
-        };
+        }
     }
 }
