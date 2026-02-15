@@ -18,5 +18,5 @@ fn main() {
     let event_loop = EventLoop::new().unwrap();
     event_loop
         .run_app(&mut App::default())
-        .expect("event loop error")
+        .expect("event loop error");
 }
