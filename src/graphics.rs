@@ -56,7 +56,7 @@ impl Graphics {
         self.blit = BlitGraphics::init(&self.persistent, &self.render_texture_config);
     }
 
-    pub fn update_parameters_buffer(&mut self, parameters: &Parameters) {
+    pub fn update_parameters_buffer(&self, parameters: &Parameters) {
         self.persistent.update_parameters_buffer(parameters)
     }
 
