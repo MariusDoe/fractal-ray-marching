@@ -10,6 +10,7 @@ const SUN_DIRECTION = Direction(-1, -0.5, 1);
 const SUN_COLOR = Color(1, 1, 1);
 const SHADOW_FACTOR = 0.7;
 const SHADOW_SHARPNESS = 32;
+const SPECULAR_FACTOR = 0.15;
 const SPECULAR_SHARPNESS = 16;
 const AMBIENT_OCCLUSION_FACTOR = 0.2;
 const AMBIENT_OCCLUSION_SHARPNESS = 100;
@@ -342,7 +343,7 @@ fn fragment_main(@location(0) screen_position: vec2<Scalar>) -> @location(0) vec
         color *= mix(AMBIENT_OCCLUSION_FACTOR, 1, ambient_occlusion);
         let shadow = Scalar(sun_result.distance < 0) * SHADOW_SHARPNESS * sun_result.closeness;
         color *= mix(SHADOW_FACTOR, 1, clamp(shadow, 0, 1));
-        color += shadow * specular * SUN_COLOR;
+        color += SPECULAR_FACTOR * shadow * specular * SUN_COLOR;
     }
     return vec4(color, 1);
 }
