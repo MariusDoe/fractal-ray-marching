@@ -146,10 +146,9 @@ impl InitializedApp {
     pub fn handle_cursor_movement(&mut self, position: PhysicalPosition<f64>) -> Result<()> {
         let delta = self.graphics.move_cursor(position)?;
         if let Some(delta) = delta {
-            let yaw = delta.x;
-            let pitch = delta.y;
-            self.camera
-                .rotate_from_cursor_movement(yaw as f32, pitch as f32);
+            let yaw = delta.x as f32;
+            let pitch = delta.y as f32;
+            self.camera.rotate_from_cursor_movement(yaw, pitch);
         }
         Ok(())
     }
