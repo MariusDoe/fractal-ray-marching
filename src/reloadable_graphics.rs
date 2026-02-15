@@ -22,10 +22,12 @@ impl ReloadableGraphics {
         } = persistent;
         let fragment_shader_source = if cfg!(debug_assertions) {
             let fragment_shader_source_path =
-                Path::new(file!()).parent().unwrap().join("./fragment.wgsl");
+                Path::new(file!()).parent().unwrap().join("fragment.wgsl");
             Cow::Owned(
-                read_to_string(fragment_shader_source_path)
-                    .context("failed to read fragment shader source")?,
+                read_to_string(&fragment_shader_source_path).with_context(|| {
+                    let path = fragment_shader_source_path.display();
+                    format!("failed to read fragment shader source at {path}")
+                })?,
             )
         } else {
             Cow::Borrowed(include_str!("./fragment.wgsl"))
