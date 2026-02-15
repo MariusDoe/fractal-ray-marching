@@ -118,7 +118,7 @@ impl InitializedApp {
         }
     }
 
-    pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) -> Result<()> {
+    pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) {
         const LINE_FACTOR: f32 = 0.5;
         let (mut x, mut y) = match delta {
             MouseScrollDelta::LineDelta(x, y) => (x * LINE_FACTOR, y * LINE_FACTOR),
@@ -134,7 +134,6 @@ impl InitializedApp {
             self.camera.update_orbit_speed(x);
             self.camera.update_speed(y);
         }
-        Ok(())
     }
 
     pub fn handle_focused(&mut self, focused: bool) {

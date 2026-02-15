@@ -50,8 +50,7 @@ impl App {
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 self.initialized_mut("got mouse wheel before initializtation")
-                    .handle_mouse_wheel(delta)
-                    .context("failed to handle mouse wheel")?;
+                    .handle_mouse_wheel(delta);
             }
             WindowEvent::Focused(focused) => {
                 self.initialized_mut("got focused before initialization")
