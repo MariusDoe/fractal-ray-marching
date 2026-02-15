@@ -72,7 +72,7 @@ fn scene(position: Position) -> Object {
             return koch3D(position, animate_between(sqrt(3), 4));
         }
         case 18: {
-            return mandelbulb(position, animate_between(1, 9), 100.0);
+            return mandelbulb(position, animate_between(4, 9), 100.0);
         }
     }
 }
