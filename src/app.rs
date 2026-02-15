@@ -37,8 +37,7 @@ impl App {
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 self.initialized_mut("got keyboard input before initialization")
-                    .handle_key(&event)
-                    .context("failed to handle keyboard input")?;
+                    .handle_key(&event);
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.initialized_mut("got cursor movement before initialization")
@@ -47,8 +46,7 @@ impl App {
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 self.initialized_mut("got mouse input before initialization")
-                    .handle_mouse(button, state)
-                    .context("failed to handle mouse input")?;
+                    .handle_mouse(button, state);
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 self.initialized_mut("got mouse wheel before initializtation")
@@ -57,8 +55,7 @@ impl App {
             }
             WindowEvent::Focused(focused) => self
                 .initialized_mut("got focused before initialization")
-                .handle_focused(focused)
-                .context("failed to handle focused")?,
+                .handle_focused(focused),
             _ => {}
         }
         Ok(())

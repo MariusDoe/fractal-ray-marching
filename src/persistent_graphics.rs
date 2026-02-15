@@ -10,11 +10,7 @@ use wgpu::{
     ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface, TextureSampleType,
     TextureViewDimension,
 };
-use winit::{
-    dpi::PhysicalSize,
-    event_loop::ActiveEventLoop,
-    window::{CursorGrabMode, Window},
-};
+use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop, window::Window};
 
 #[derive(Debug)]
 pub struct PersistentGraphics {
@@ -176,32 +172,19 @@ impl PersistentGraphics {
         );
     }
 
-    pub fn grab_cursor(&mut self) -> Result<()> {
+    pub fn grab_cursor(&mut self) {
         if self.is_cursor_grabbed {
-            return Ok(());
+            return;
         }
-        const CURSOR_GRAB_MODE: CursorGrabMode = if cfg!(target_os = "macos") {
-            CursorGrabMode::Locked
-        } else {
-            CursorGrabMode::Confined
-        };
-        self.window
-            .set_cursor_grab(CURSOR_GRAB_MODE)
-            .context("failed to grab cursor")?;
         self.window.set_cursor_visible(false);
         self.is_cursor_grabbed = true;
-        Ok(())
     }
 
-    pub fn ungrab_cursor(&mut self) -> Result<()> {
+    pub fn ungrab_cursor(&mut self) {
         if !self.is_cursor_grabbed {
-            return Ok(());
+            return;
         }
-        self.window
-            .set_cursor_grab(CursorGrabMode::None)
-            .context("failed to ungrab cursor")?;
         self.window.set_cursor_visible(true);
         self.is_cursor_grabbed = false;
-        Ok(())
     }
 }

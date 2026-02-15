@@ -80,11 +80,11 @@ impl Graphics {
         }
     }
 
-    pub fn grab_cursor(&mut self) -> Result<()> {
+    pub fn grab_cursor(&mut self) {
         self.persistent.grab_cursor()
     }
 
-    pub fn ungrab_cursor(&mut self) -> Result<()> {
+    pub fn ungrab_cursor(&mut self) {
         self.persistent.ungrab_cursor()
     }
 

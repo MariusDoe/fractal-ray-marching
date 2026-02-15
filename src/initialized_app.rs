@@ -51,28 +51,27 @@ impl InitializedApp {
         self.graphics.resize(&mut self.parameters)
     }
 
-    pub fn handle_key(&mut self, event: &KeyEvent) -> Result<()> {
+    pub fn handle_key(&mut self, event: &KeyEvent) {
         self.handle_held_keys(event);
-        self.handle_trigger_keys(event)?;
-        Ok(())
+        self.handle_trigger_keys(event);
     }
 
-    fn handle_trigger_keys(&mut self, event: &KeyEvent) -> Result<()> {
+    fn handle_trigger_keys(&mut self, event: &KeyEvent) {
         if event.state != ElementState::Pressed {
-            return Ok(());
+            return;
         }
         macro_rules! handle_keys {
             ($($key:expr => $body:stmt),* $(,)?) => {
                 $(
                     if event.logical_key == $key {
                         $body
-                        return Ok(());
+                        return;
                     }
                 )*
             };
         }
         handle_keys!(
-            NamedKey::Escape => self.graphics.ungrab_cursor()?,
+            NamedKey::Escape => self.graphics.ungrab_cursor(),
             "+" => self.parameters.update_num_iterations(1),
             "-" => self.parameters.update_num_iterations(-1),
             "n" => self.parameters.update_scene_index(1),
@@ -86,7 +85,6 @@ impl InitializedApp {
             ">" => self.graphics.update_render_texture_size(1),
             "<" => self.graphics.update_render_texture_size(-1),
         );
-        Ok(())
     }
 
     fn handle_held_keys(&mut self, event: &KeyEvent) {
@@ -114,11 +112,10 @@ impl InitializedApp {
         self.held_keys.set(held_key, event.state.is_pressed());
     }
 
-    pub fn handle_mouse(&mut self, button: MouseButton, state: ElementState) -> Result<()> {
+    pub fn handle_mouse(&mut self, button: MouseButton, state: ElementState) {
         if button == MouseButton::Left && state == ElementState::Pressed {
-            self.graphics.grab_cursor()?;
+            self.graphics.grab_cursor();
         }
-        Ok(())
     }
 
     pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) -> Result<()> {
@@ -140,11 +137,10 @@ impl InitializedApp {
         Ok(())
     }
 
-    pub fn handle_focused(&mut self, focused: bool) -> Result<()> {
+    pub fn handle_focused(&mut self, focused: bool) {
         if !focused {
-            self.graphics.ungrab_cursor()?;
+            self.graphics.ungrab_cursor();
         }
-        Ok(())
     }
 
     pub fn handle_cursor_movement(&mut self, position: PhysicalPosition<f64>) -> Result<()> {
